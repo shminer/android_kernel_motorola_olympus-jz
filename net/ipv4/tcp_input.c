@@ -460,8 +460,13 @@ static void tcp_rcv_rtt_update(struct tcp_sock *tp, u32 sample, int win_dep)
 		if (!win_dep) {
 			m -= (new_sample >> 3);
 			new_sample += m;
-		} else if (m < new_sample)
-			new_sample = m << 3;
+		} 
+		else 
+		{
+        m <<= 3;
+        if (m < new_sample)
+        new_sample = m;
+        }
 	} else {
 		/* No previous measure. */
 		new_sample = m << 3;
@@ -2829,9 +2834,13 @@ static inline void tcp_complete_cwr(struct sock *sk)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	/* Do not moderate cwnd if it's already undone in cwr or recovery */
-	if (tp->undo_marker && tp->snd_cwnd > tp->snd_ssthresh) {
-		tp->snd_cwnd = tp->snd_ssthresh;
-		tp->snd_cwnd_stamp = tcp_time_stamp;
+	if (tp->undo_marker) 
+	{
+     if (inet_csk(sk)->icsk_ca_state == TCP_CA_CWR)
+     tp->snd_cwnd = min(tp->snd_cwnd, tp->snd_ssthresh);
+     else /* PRR */
+     tp->snd_cwnd = tp->snd_ssthresh;	
+	 tp->snd_cwnd_stamp = tcp_time_stamp;
 	}
 	tcp_ca_event(sk, CA_EVENT_COMPLETE_CWR);
 }
@@ -2948,6 +2957,27 @@ void tcp_simple_retransmit(struct sock *sk)
 }
 EXPORT_SYMBOL(tcp_simple_retransmit);
 
+static void tcp_update_cwnd_in_recovery(struct sock *sk, int newly_acked_sacked,
+                                        int fast_rexmit, int flag)
+{
+        struct tcp_sock *tp = tcp_sk(sk);
+        int sndcnt = 0;
+        int delta = tp->snd_ssthresh - tcp_packets_in_flight(tp);
+
+        if (tcp_packets_in_flight(tp) > tp->snd_ssthresh) {
+                u64 dividend = (u64)tp->snd_ssthresh * tp->prr_delivered +
+                               tp->prior_cwnd - 1;
+                sndcnt = div_u64(dividend, tp->prior_cwnd) - tp->prr_out;
+        } else {
+                sndcnt = min_t(int, delta,
+                               max_t(int, tp->prr_delivered - tp->prr_out,
+                                     newly_acked_sacked) + 1);
+        }
+
+        sndcnt = max(sndcnt, (fast_rexmit ? 1 : 0));
+        tp->snd_cwnd = tcp_packets_in_flight(tp) + sndcnt;
+}
+
 /* Process an event, which can update packets-in-flight not trivially.
  * Main goal of this function is to calculate new estimate for left_out,
  * taking into account both packets sitting in receiver's buffer and
@@ -2959,7 +2989,8 @@ EXPORT_SYMBOL(tcp_simple_retransmit);
  * It does _not_ decide what to send, it is made in function
  * tcp_xmit_retransmit_queue().
  */
-static void tcp_fastretrans_alert(struct sock *sk, int pkts_acked, int flag)
+static void tcp_fastretrans_alert(struct sock *sk, int pkts_acked,
+                                  int newly_acked_sacked, int flag)
 {
 	struct inet_connection_sock *icsk = inet_csk(sk);
 	struct tcp_sock *tp = tcp_sk(sk);
@@ -3109,6 +3140,9 @@ static void tcp_fastretrans_alert(struct sock *sk, int pkts_acked, int flag)
 
 		tp->bytes_acked = 0;
 		tp->snd_cwnd_cnt = 0;
+		tp->prior_cwnd = tp->snd_cwnd;
+        tp->prr_delivered = 0;
+        tp->prr_out = 0;
 		tcp_set_ca_state(sk, TCP_CA_Recovery);
 		fast_rexmit = 1;
 	}
@@ -3630,6 +3664,8 @@ static int tcp_ack(struct sock *sk, struct sk_buff *skb, int flag)
 	u32 prior_in_flight;
 	u32 prior_fackets;
 	int prior_packets;
+	int prior_sacked = tp->sacked_out;
+    int newly_acked_sacked = 0;
 	int frto_cwnd = 0;
 
 	/* If the ack is older than previous acks
@@ -3701,6 +3737,8 @@ static int tcp_ack(struct sock *sk, struct sk_buff *skb, int flag)
 	/* See if we can take anything off of the retransmit queue. */
 	flag |= tcp_clean_rtx_queue(sk, prior_fackets, prior_snd_una);
 
+    newly_acked_sacked = (prior_packets - prior_sacked) - (tp->packets_out - tp->sacked_out);
+
 	if (tp->frto_counter)
 		frto_cwnd = tcp_process_frto(sk, flag);
 	/* Guarantee sacktag reordering detection against wrap-arounds */
@@ -3713,7 +3751,7 @@ static int tcp_ack(struct sock *sk, struct sk_buff *skb, int flag)
 		    tcp_may_raise_cwnd(sk, flag))
 			tcp_cong_avoid(sk, ack, prior_in_flight);
 		tcp_fastretrans_alert(sk, prior_packets - tp->packets_out,
-				      flag);
+				      newly_acked_sacked, flag);
 	} else {
 		if ((flag & FLAG_DATA_ACKED) && !frto_cwnd)
 			tcp_cong_avoid(sk, ack, prior_in_flight);

@@ -72,7 +72,7 @@ static struct device_pid olympus_android_pid[MAX_DEVICE_TYPE_NUM] = {
 };
 
 static struct android_usb_platform_data android_usb_pdata = {
-	.vendor         = "Motorola",
+	.vendor         = "JZ-Kernel",
 	.product_name   = "MB860",
 	.android_pid    = olympus_android_pid,
 	.nluns                  = 2,
@@ -84,6 +84,74 @@ static struct platform_device android_usb_platform_device = {
 	.id     = -1,
 	.dev    = {
 		.platform_data = &android_usb_pdata,
+	},
+};
+
+static struct tegra_usb_platform_data tegra_udc_pdata = {
+	.port_otg = true,
+	.has_hostpc = false,
+	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
+	.op_mode = TEGRA_USB_OPMODE_DEVICE,
+	.u_data.dev = {
+		.vbus_pmu_irq = 0,
+		.vbus_gpio = -1,
+		.charging_supported = false,
+		.remote_wakeup_supported = false,
+	},
+	.u_cfg.utmi = {
+		.hssync_start_delay = 9,
+		.idle_wait_delay = 17,
+		.elastic_limit = 16,
+		.term_range_adj = 6,
+		.xcvr_setup = 15,
+		.xcvr_lsfslew = 1,
+		.xcvr_lsrslew = 1,
+	},
+};
+
+static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
+	.port_otg = false,
+	.has_hostpc = false,
+	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
+	.op_mode = TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.vbus_reg = NULL,
+		.hot_plug = false,
+		.remote_wakeup_supported = false,
+		.power_off_on_suspend = true,
+	},
+	.u_cfg.utmi = {
+		.hssync_start_delay = 9,
+		.elastic_limit = 16,
+		.idle_wait_delay = 17,
+		.term_range_adj = 6,
+		.xcvr_setup = 8,
+		.xcvr_lsfslew = 2,
+		.xcvr_lsrslew = 2,
+	},
+};
+
+static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
+	.port_otg = true,
+	.has_hostpc = false,
+	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
+	.op_mode	= TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.vbus_reg = NULL,
+		.hot_plug = true,
+		.remote_wakeup_supported = true,
+		.power_off_on_suspend = true,
+	},
+	.u_cfg.utmi = {
+		.hssync_start_delay = 9,
+		.elastic_limit = 16,
+		.idle_wait_delay = 17,
+		.term_range_adj = 6,
+		.xcvr_setup = 8,
+		.xcvr_lsfslew = 2,
+		.xcvr_lsrslew = 2,
 	},
 };
 
@@ -106,75 +174,6 @@ static struct platform_device cpcap_otg_device = {
 	},
 };
 
-static struct tegra_usb_platform_data tegra_udc_pdata = {
-	.port_otg = true,
-	.has_hostpc = false,
-	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
-	.op_mode = TEGRA_USB_OPMODE_DEVICE,
-	.u_data.dev = {
-		//.vbus_pmu_irq = -1,
-		//.vbus_gpio = TEGRA_GPIO_PV6,
-		.charging_supported = true,
-		.remote_wakeup_supported = false,
-	},
-	.u_cfg.utmi = {
-		.hssync_start_delay = 9,
-		.idle_wait_delay = 17,
-		.elastic_limit = 16,
-		.term_range_adj = 6,
-		.xcvr_setup = 15,
-		.xcvr_lsfslew = 1,
-		.xcvr_lsrslew = 1,
-	},
-};
-
-static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
-	.port_otg = true,
-	.has_hostpc = false,
-	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
-	.op_mode = TEGRA_USB_OPMODE_HOST,
-	.u_data.host = {
-		.vbus_gpio = -1,
-		.vbus_reg = NULL,
-//		.vbus_reg = "vusb",
-		.hot_plug = true,
-		.remote_wakeup_supported = false,
-		.power_off_on_suspend = true,
-	},
-	.u_cfg.utmi = {
-		.hssync_start_delay = 9,
-		.elastic_limit = 16,
-		.idle_wait_delay = 17,
-		.term_range_adj = 6,
-		.xcvr_setup = 8,
-		.xcvr_lsfslew = 2,
-		.xcvr_lsrslew = 2,
-	},
-};
-
-static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
-	.port_otg = false,
-	.has_hostpc = false,
-	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
-	.op_mode	= TEGRA_USB_OPMODE_HOST,
-	.u_data.host = {
-		.vbus_gpio = -1,
-		.vbus_reg = NULL,
-		.hot_plug = true,
-		.remote_wakeup_supported = false,
-		.power_off_on_suspend = true,
-	},
-	.u_cfg.utmi = {
-		.hssync_start_delay = 9,
-		.elastic_limit = 16,
-		.idle_wait_delay = 17,
-		.term_range_adj = 6,
-		.xcvr_setup = 8,
-		.xcvr_lsfslew = 2,
-		.xcvr_lsrslew = 2,
-	},
-};
-
 static char *usb_serial_num;
 
 static int __init olympus_usb_serial_num_setup(char *options)
@@ -188,6 +187,7 @@ __setup("androidboot.serialno=", olympus_usb_serial_num_setup);
 void olympus_usb_init(void)
 {
 	/* OTG should be the first to be registered */
+	//cpcap_otg_device.dev.platform_data = &cpcap_otg_pdata;
 	cpcap_device_register(&cpcap_otg_device);
 
 	tegra_ehci1_device.dev.platform_data = &tegra_ehci1_utmi_pdata;

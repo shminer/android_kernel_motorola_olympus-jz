@@ -39,6 +39,10 @@
 #include "clock.h"
 #include "dvfs.h"
 
+#define FREQCOUNT 7
+extern int cpufrequency[FREQCOUNT];
+extern int cpuuvoffset[FREQCOUNT];
+
 #define DVFS_RAIL_STATS_BIN	25
 #define DVFS_RAIL_STATS_SCALE	2
 #define DVFS_RAIL_STATS_RANGE   ((DVFS_RAIL_STATS_TOP_BIN - 1) * \
@@ -212,12 +216,12 @@ static int dvfs_rail_set_voltage(struct dvfs_rail *rail, int millivolts)
 			rail->updating = true;
 			ret = regulator_set_voltage(rail->reg,
 				rail->new_millivolts * 1000,
-				//rail->max_millivolts * 1000);
-				rail->new_millivolts * 1000);
+				rail->max_millivolts * 1000);
+				//rail->new_millivolts * 1000);
 			rail->updating = false;
 		}
 		if (ret) {
-			pr_err("Failed to set dvfs regulator %s\n", rail->reg_id);
+			pr_err("Failed to set dvfs regulator %s to %d (max %d)\n", rail->reg_id, rail->new_millivolts, rail->max_millivolts);
 			goto out;
 		}
 
@@ -329,7 +333,7 @@ static inline unsigned long *dvfs_get_freqs(struct dvfs *d)
 static int
 __tegra_dvfs_set_rate(struct dvfs *d, unsigned long rate)
 {
-	int i = 0;
+	int i = 0, j = 0, mvoffset = 0;
 	int ret;
 	unsigned long *freqs = dvfs_get_freqs(d);
 
@@ -345,16 +349,17 @@ __tegra_dvfs_set_rate(struct dvfs *d, unsigned long rate)
 	if (rate == 0) {
 		d->cur_millivolts = 0;
 	} else {
-		while (i < d->num_freqs && rate > freqs[i])
+		while (i < d->num_freqs && rate > d->freqs[i])
 			i++;
-
-		if ((d->max_millivolts) &&
-		    (d->millivolts[i] > d->max_millivolts)) {
-			pr_warn("tegra_dvfs: voltage %d too high for dvfs on"
-				" %s\n", d->millivolts[i], d->clk_name);
-			return -EINVAL;
+	/* fix by jz */
+		if (strcmp(d->clk_name, "cpu") == 0)
+		{
+			while (j < FREQCOUNT && (rate / 1000) < cpufrequency[j]) // TODO: Make more robust
+				j++;
+			mvoffset = cpuuvoffset[j];
 		}
-		d->cur_millivolts = d->millivolts[i];
+		else mvoffset = 0;
+		d->cur_millivolts = d->millivolts[i] - mvoffset;
 	}
 
 	d->cur_rate = rate;

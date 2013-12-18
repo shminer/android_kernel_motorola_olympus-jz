@@ -840,7 +840,10 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		nvhdcp_err("nvhdcp failure - giving up\n");
 		goto err;
 	}
-	nvhdcp->state = STATE_UNAUTHENTICATED;
+	
+	mutex_lock(&nvhdcp->state_lock);
+    nvhdcp->state = STATE_UNAUTHENTICATED;
+    mutex_unlock(&nvhdcp->state_lock);
 
 	/* check plug state to terminate early in case flush_workqueue() */
 	if (!nvhdcp_is_plugged(nvhdcp)) {

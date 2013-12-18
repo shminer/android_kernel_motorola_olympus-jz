@@ -149,6 +149,7 @@ static struct resource isp_resources_t20[] = {
 		.start = TEGRA_ISP_BASE,
 		.end = TEGRA_ISP_BASE + TEGRA_ISP_SIZE - 1,
 		.flags = IORESOURCE_MEM,
+		
 	}
 };
 

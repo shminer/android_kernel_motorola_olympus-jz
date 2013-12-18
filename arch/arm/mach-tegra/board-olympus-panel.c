@@ -133,16 +133,16 @@ static struct resource olympus_disp2_resources[] = {
 static struct tegra_dc_mode olympus_panel_modes_for_0x8[] = {
 	{
 		.pclk = 27000000,
-		.h_ref_to_sync = 4,
-		.v_ref_to_sync = 4,
-		.h_sync_width = 4,
-		.v_sync_width = 8,
-		.h_back_porch = 52,
-		.v_back_porch = 12,
+		.h_ref_to_sync = 1,//2
+		.v_ref_to_sync = 1,//1
+		.h_sync_width = 2,//4
+		.v_sync_width = 1,//2
+		.h_back_porch = 28,// good 22
+		.v_back_porch = 2,//3
 		.h_active = 540,
 		.v_active = 960,
-		.h_front_porch = 52,
-		.v_front_porch = 12,
+		.h_front_porch = 28,// good 22
+		.v_front_porch = 2,//3
 	},
 };
 static struct tegra_dc_mode olympus_panel_modes[] = {
@@ -385,7 +385,7 @@ static int olympus_panel_disable(void)
 static struct tegra_dsi_out olympus_dsi_out = {
 		.dsi_instance = 0,
 		.n_data_lanes = 2,
-		.refresh_rate = 64,
+		.refresh_rate = 60,
 		.lp_cmd_mode_freq_khz = 229500,
 		.panel_reset = true,	/* resend the init sequence on each resume */
 		.panel_reset_timeout_msec = 202,
@@ -666,7 +666,7 @@ int __init olympus_panel_init(void)
 	res->end = tegra_fb_start + tegra_fb_size - 1;
 
 	tegra_move_framebuffer(tegra_fb_start,tegra_bootloader_fb_start,
-			min(tegra_fb_size, tegra_bootloader_fb_size));
+			tegra_fb_size, tegra_bootloader_fb_size);
 
 	res = nvhost_get_resource_byname(&olympus_disp2_device,
 		IORESOURCE_MEM, "fbmem");

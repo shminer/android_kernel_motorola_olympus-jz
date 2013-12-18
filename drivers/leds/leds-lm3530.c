@@ -589,7 +589,7 @@ static int lm3530_probe (struct i2c_client *client,
 #endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    driver_data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 5;
+    driver_data->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1;
     driver_data->early_suspend.suspend = lm3530_early_suspend,
     driver_data->early_suspend.resume = lm3530_late_resume,
     register_early_suspend (&driver_data->early_suspend);

@@ -232,6 +232,7 @@ static __initdata struct tegra_clk_init_table common_clk_init_table[] = {
 static void tegra_cache_smc(bool enable, u32 arg)
 {
 	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
+	u32 aux_ctrl;
 	bool need_affinity_switch;
 	bool can_switch_affinity;
 	bool l2x0_enabled;
@@ -319,6 +320,13 @@ void tegra_init_cache(bool init)
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)
 	writel_relaxed(0x331, p + L2X0_TAG_LATENCY_CTRL);
 	writel_relaxed(0x441, p + L2X0_DATA_LATENCY_CTRL);
+	writel(7, p + L2X0_PREFETCH_CTRL);//
+	writel_relaxed(L2X0_DYNAMIC_CLK_GATING_EN, p + L2X0_POWER_CTRL);//
+	
+	aux_ctrl = readl(p + L2X0_CACHE_TYPE);
+    aux_ctrl = (aux_ctrl & 0x700) << (17-8);
+    aux_ctrl |= 0x7C000001;
+    l2x0_init(p, aux_ctrl, 0x8200c3fe);
 
 #elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
 #ifdef CONFIG_TEGRA_SILICON_PLATFORM
@@ -762,6 +770,7 @@ void __init tegra_protected_aperture_init(unsigned long aperture)
  * highmem, or outside the memory map) to a physical address that is outside
  * the memory map.
  */
+/*
 void tegra_move_framebuffer(unsigned long to, unsigned long from,
 	unsigned long size)
 {
@@ -806,7 +815,7 @@ void tegra_move_framebuffer(unsigned long to, unsigned long from,
 			goto out;
 		}
 
-		for (i = 0; i < size; i += 4)
+		for (i = 0; i < size; i += 2)
 			writel(readl(from_io + i), to_io + i);
 
 		iounmap(from_io);
@@ -814,6 +823,66 @@ void tegra_move_framebuffer(unsigned long to, unsigned long from,
 out:
 	iounmap(to_io);
 }
+*/
+unsigned int to_rgb888(unsigned int temp)
+	{
+	unsigned int red, green, blue;
+		red = (temp >> 11) & 0x1F;
+		green = (temp >> 5) & 0x3F;
+		blue = (temp & 0x001F);
+		red = (red << 3) | (red >> 2);
+		green = (green << 2) | (green >> 4);
+		blue = (blue << 3) | (blue >> 2);
+		return (blue << 16) | (green << 8) | (red << 0);
+	}
+ 
+    void tegra_move_framebuffer(unsigned long to, unsigned long from,
+                                unsigned long to_size, unsigned long from_size)
+    {
+            struct page *page;
+            void __iomem *to_io;
+            u16 *from_virt;
+            unsigned long i, j;
+     
+            BUG_ON(PAGE_ALIGN((unsigned long)to) != (unsigned long)to);
+            BUG_ON(PAGE_ALIGN(from) != from);
+            BUG_ON(PAGE_ALIGN(to_size) != to_size);
+            BUG_ON(PAGE_ALIGN(from_size) != from_size);
+     
+            to_io = ioremap(to, to_size);
+            if (!to_io) {
+                    pr_err("%s: Failed to map target framebuffer\n", __func__);
+                    return;
+            }
+     
+            if (pfn_valid(page_to_pfn(phys_to_page(from)))) {
+                    for (i = 0 ; i < from_size; i += PAGE_SIZE) {
+                            page = phys_to_page(from + i);
+                            from_virt = kmap(page);
+     
+                            for (j = 0; j < PAGE_SIZE; j += 2)
+                            //memcpy(to_io + 2*j + i,&to_rgb888,sizeof(to_rgb888));
+                            writel(to_rgb888(*(from_virt+j)), to_io + 2*j + i);
+     
+                            kunmap(page);
+                    }
+            } else {
+                    void __iomem *from_io = ioremap(from, from_size);
+                    if (!from_io) {
+                            pr_err("%s: Failed to map source framebuffer\n",
+                                   __func__);
+                            goto out;
+                    }
+     
+                    for (i = 0; i < from_size; i += 2)
+                            writel(to_rgb888(readw(from_io + i)), to_io + 2*i);
+     
+                    iounmap(from_io);
+            }
+    out:
+            iounmap(to_io);
+    }
+
 
 void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 	unsigned long fb2_size)

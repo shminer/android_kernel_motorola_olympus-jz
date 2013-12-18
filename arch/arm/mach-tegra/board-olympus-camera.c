@@ -319,16 +319,17 @@ struct dw9714l_platform_data focuser_dw9714l_pdata = {
 };
 
 static struct lm3554_platform_data flash_lm3554_data = {
-	.flags	= 0x1,
-	.torch_brightness_def = 0xa0,
-	.flash_brightness_def = 0x78,
-	.flash_duration_def = 0x28,
-	.config_reg_1_def = 0xe0,
+	.flags	= 0x40,
+	.torch_brightness_def = 0x50,
+	.flash_brightness_def = 0x28,
+	.flash_duration_def = 0x4f,
+	.config_reg_1_def = 0x40,
 	.config_reg_2_def = 0xf0,
-	.vin_monitor_def = 0x01,
-	.gpio_reg_def = 0x0,
+	.vin_monitor_def = 0xf2,
+	.gpio_reg_def = 0x80,
 /*
 	.power_id = POWER_ID_FLASH,
+	* 
 	.power_on = olympus_rear_cam_power_on,
 	.power_off = olympus_rear_cam_power_off,
 */

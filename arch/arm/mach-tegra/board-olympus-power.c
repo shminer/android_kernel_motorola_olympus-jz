@@ -306,7 +306,7 @@ static struct platform_device *cpcap_devices[] = {
 	&cpcap_batt_device,
 #ifdef CONFIG_CPCAP_WATCHDOG
 	&cpcap_wdt_device,
-#endif*/
+#endif
 };
 
 static int is_olympus_ge_p0(struct cpcap_device *cpcap)
@@ -964,6 +964,7 @@ struct cpcap_platform_data tegra_cpcap_data =
 	.regulator_init = cpcap_regulator,
 	.adc_ato = &cpcap_adc_ato,
 	.wdt_disable = 0,
+	.ac_changed =  NULL,
 	.usb_changed = NULL,
 	.hwcfg = {
 		(CPCAP_HWCFG0_SEC_STBY_SW3 |
@@ -1039,10 +1040,11 @@ static void olympus_board_suspend(int lp_state, enum suspend_stage stg)
 	int rc,ret;
 	if ((lp_state == TEGRA_SUSPEND_LP1) && (stg == TEGRA_SUSPEND_BEFORE_CPU))
 		tegra_console_uart_suspend();
+#if 0
 	if ((lp_state == TEGRA_SUSPEND_LP0) && (stg == TEGRA_SUSPEND_BEFORE_CPU))
 			{
 				printk(KERN_INFO "%s: entering...\n", __func__);
-#if 0
+
 				tegra_pinmux_set_tristate(5 /*TEGRA_PINGROUP_CDEV*/, TEGRA_TRI_TRISTATE);
 				tegra_pinmux_set_tristate(8 /*TEGRA_PINGROUP_CSUS*/, TEGRA_TRI_TRISTATE);
 				tegra_pinmux_set_tristate(9 /*TEGRA_PINGROUP_DAP1*/, TEGRA_TRI_TRISTATE);
@@ -1062,18 +1064,18 @@ static void olympus_board_suspend(int lp_state, enum suspend_stage stg)
 				tegra_pinmux_set_tristate(104/*TEGRA_PINGROUP_UCA*/, TEGRA_TRI_TRISTATE);
 				tegra_pinmux_set_tristate(105/*TEGRA_PINGROUP_UCB*/, TEGRA_TRI_TRISTATE);
 				tegra_pinmux_set_pullupdown(108/*TEGRA_PINGROUP_DDRC*/, TEGRA_PUPD_PULL_UP);
-#endif
+
 				printk(KERN_INFO "%s: TEGRA_GPIO_PM2 = 0",__func__);
-				gpio_set_value(TEGRA_GPIO_PM2, 0);
+				//gpio_set_value(TEGRA_GPIO_PM2, 0);
 
 				printk(KERN_INFO "%s: TEGRA_AKM8975_IRQ_GPIO",__func__);
-				tegra_gpio_disable(TEGRA_AKM8975_IRQ_GPIO);
+				//tegra_gpio_disable(TEGRA_AKM8975_IRQ_GPIO);
 
 				printk(KERN_INFO "%s: TEGRA_GPIO_PT3 = 0",__func__);
-				gpio_set_value(TEGRA_GPIO_PT3, 0);
+				//gpio_set_value(TEGRA_GPIO_PT3, 0);
 
 				printk(KERN_INFO "%s: TEGRA_GPIO_PM5 disabling",__func__);
-				tegra_gpio_disable(TEGRA_GPIO_PM5);
+				//tegra_gpio_disable(TEGRA_GPIO_PM5);
 
 //				printk(KERN_INFO "%s: TEGRA_GPIO_PU1 = 0",__func__);
 //				gpio_set_value(TEGRA_GPIO_PU1, 0);
@@ -1100,7 +1102,7 @@ static void olympus_board_suspend(int lp_state, enum suspend_stage stg)
 				get_gpio_settings();
 				printk(KERN_INFO "%s: exiting...\n", __func__);
 			};
-
+#endif
 };
 
 static void olympus_board_resume(int lp_state, enum resume_stage stg)
@@ -1108,9 +1110,9 @@ static void olympus_board_resume(int lp_state, enum resume_stage stg)
 	int rc;
 	if ((lp_state == TEGRA_SUSPEND_LP1) && (stg == TEGRA_RESUME_AFTER_CPU))
 		tegra_console_uart_resume();
+#if 0
 	if ((lp_state == TEGRA_SUSPEND_LP0) && (stg == TEGRA_RESUME_AFTER_CPU)) {
 		printk(KERN_INFO "%s: entering...\n", __func__);
-#if 0
 		tegra_pinmux_set_tristate(5 /*TEGRA_PINGROUP_CDEV*/, TEGRA_TRI_NORMAL);
 		tegra_pinmux_set_tristate(8 /*TEGRA_PINGROUP_CSUS*/, TEGRA_TRI_NORMAL);
 		tegra_pinmux_set_tristate(9 /*TEGRA_PINGROUP_DAP1*/, TEGRA_TRI_NORMAL);
@@ -1130,18 +1132,18 @@ static void olympus_board_resume(int lp_state, enum resume_stage stg)
 		tegra_pinmux_set_tristate(104/*TEGRA_PINGROUP_UCA*/, TEGRA_TRI_NORMAL);
 		tegra_pinmux_set_tristate(105/*TEGRA_PINGROUP_UCB*/, TEGRA_TRI_NORMAL);
 		tegra_pinmux_set_pullupdown(108/*TEGRA_PINGROUP_DDRC*/, TEGRA_PUPD_NORMAL);
-#endif
+
 		printk(KERN_INFO "%s: TEGRA_GPIO_PM2 = 1",__func__);
-		gpio_set_value(TEGRA_GPIO_PM2, 1);
+		//gpio_set_value(TEGRA_GPIO_PM2, 1);
 
 		printk(KERN_INFO "%s: TEGRA_AKM8975_IRQ_GPIO",__func__);
-		tegra_gpio_enable(TEGRA_AKM8975_IRQ_GPIO);
+		//tegra_gpio_enable(TEGRA_AKM8975_IRQ_GPIO);
 
 		printk(KERN_INFO "%s: TEGRA_GPIO_PT3 = 1",__func__);
-		gpio_set_value(TEGRA_GPIO_PT3, 1);
+		//gpio_set_value(TEGRA_GPIO_PT3, 1);
 
 		printk(KERN_INFO "%s: TEGRA_GPIO_PM5 disabling",__func__);
-		tegra_gpio_enable(TEGRA_GPIO_PM5);
+		//tegra_gpio_enable(TEGRA_GPIO_PM5);
 
 /*		printk(KERN_INFO "%s: TEGRA_GPIO_PU1 = 1",__func__);
 		gpio_set_value(TEGRA_GPIO_PU1, 1);
@@ -1161,6 +1163,7 @@ static void olympus_board_resume(int lp_state, enum resume_stage stg)
 
 		printk(KERN_INFO "%s: exiting...\n", __func__);
 	}
+#endif
 };
 
 static struct tegra_suspend_platform_data olympus_suspend_data = {
@@ -1186,22 +1189,6 @@ static struct tegra_suspend_platform_data olympus_suspend_data = {
 
 void __init olympus_suspend_init(void)
 {
-
-/*	enable_irq_wake(wakepad_irq[2]);
-	enable_irq_wake(wakepad_irq[5]);
-	enable_irq_wake(wakepad_irq[6]);
-	enable_irq_wake(wakepad_irq[7]);
-	enable_irq_wake(wakepad_irq[17]);
-	enable_irq_wake(wakepad_irq[18]);
-	enable_irq_wake(wakepad_irq[24]);
-
-	tegra_suspend_platform.wake_low 	= 4;		//0x0000004
-	tegra_suspend_platform.wake_high 	= 393248;	//0x0060020
-	tegra_suspend_platform.wake_any 	= 16777408;	//0x10000C0
-	tegra_suspend_platform.wake_enb 	= 17170660;	//0x10600E4
-
-	*/
-
 	tegra_init_suspend(&olympus_suspend_data);
 }
 

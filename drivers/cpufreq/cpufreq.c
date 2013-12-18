@@ -31,8 +31,45 @@
 #include <linux/syscore_ops.h>
 #include <linux/pm_qos_params.h>
 
-#include <trace/events/power.h>
+#include "../../arch/arm/mach-tegra/dvfs.h"
+#include "../../arch/arm/mach-tegra/clock.h"
 
+#include <trace/events/power.h>
+/* try to add gpu oc */
+static DEFINE_MUTEX(dvfs_lock);
+
+/* user voltage control *//*
+#define FREQCOUNT 8
+#define CPUMVMAX 1300
+#define CPUMVMIN 450
+
+
+int cpufrequency[FREQCOUNT] = {1300,1200,1000,912,816,608,456,192};
+int cpuvoltage[FREQCOUNT] = {1350,1130,1000,950,900,850,800,750};
+int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0, 0};
+*/
+/* user voltage control */
+
+#define FREQCOUNT 7
+#define CPUMVMAX 1280
+#define CPUMVMIN 450
+
+
+int cpufrequency[FREQCOUNT] = {1200,1000,912,816,608,456,192};
+int cpuvoltage[FREQCOUNT] = {1120,1000,950,900,850,800,750};
+int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0};
+
+/* user voltage control */
+/*
+#define FREQCOUNT 6
+#define CPUMVMAX 1280
+#define CPUMVMIN 450
+
+
+int cpufrequency[FREQCOUNT] = {1000,912,816,608,456,192};
+int cpuvoltage[FREQCOUNT] = {1000,950,900,850,800,750};
+int cpuuvoffset[FREQCOUNT] = {0, 0, 0, 0, 0, 0};
+*/
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
  * level driver of CPUFreq support, and its spinlock. This lock
@@ -570,10 +607,129 @@ static ssize_t show_bios_limit(struct cpufreq_policy *policy, char *buf)
 	}
 	return sprintf(buf, "%u\n", policy->cpuinfo.max_freq);
 }
+/* voltage  control by JZwork*/
+static ssize_t show_frequency_voltage_table(struct cpufreq_policy *policy, char *buf)
+{
+	char *table = buf;
+	int i;
+	for (i = 0; i < FREQCOUNT; i++)
+		table += sprintf(table, "%d %d %d\n", cpufrequency[i], cpuvoltage[i], (cpuvoltage[i]-cpuuvoffset[i])); // TODO: Should be frequency, default voltage, current voltage 
+	return table - buf;
+}
+
+static ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf)
+{
+	char *table = buf;
+	int i;
+
+	table += sprintf(table, "%d", cpuuvoffset[0]);
+	for (i = 1; i < FREQCOUNT - 1; i++)
+	{
+		table += sprintf(table, " %d", cpuuvoffset[i]);
+	}
+	table += sprintf(table, " %d\n", cpuuvoffset[FREQCOUNT - 1]);
+
+	return table - buf;
+}
+
+static ssize_t show_cpuinfo_max_mV(struct cpufreq_policy *policy, char *buf)
+{
+	sprintf(buf, "%u\n", CPUMVMAX);
+}
+
+static ssize_t show_cpuinfo_min_mV(struct cpufreq_policy *policy, char *buf)
+{
+	sprintf(buf, "%u\n", CPUMVMIN);
+}
+
+static ssize_t store_UV_mV_table(struct cpufreq_policy *policy, char *buf, size_t count)
+{
+	int tmptable[FREQCOUNT];
+	int i;
+	unsigned int ret = sscanf(buf, "%d %d %d %d %d %d %d", &tmptable[0], &tmptable[1], &tmptable[2], &tmptable[3], &tmptable[4], &tmptable[5], &tmptable[6], &tmptable[7]);
+	if (ret != FREQCOUNT)
+		return -EINVAL;
+	for (i = 0; i != FREQCOUNT; i++)
+	{
+		if ((cpuvoltage[i]-tmptable[i]) > CPUMVMAX || (cpuvoltage[i]-tmptable[i]) < CPUMVMIN) // Keep within constraints
+			return -EINVAL;
+		else
+			cpuuvoffset[i] = tmptable[i];
+	}
+	return count;
+}
+/* try to add gpu oc */
+static ssize_t show_gpu_oc(struct cpufreq_policy *policy, char *buf)
+{
+        char *c = buf;
+        struct clk *gpu = tegra_get_clock_by_name("3d");
+        unsigned int i = gpu->dvfs->num_freqs;
+        unsigned long gpu_freq = 0;
+
+        if (i <= 0)
+                gpu_freq = -1;;
+
+        if (i >= 1)
+                gpu_freq = gpu->dvfs->freqs[gpu->dvfs->num_freqs-1]/1000000;
+
+        return sprintf(c, "%lu\n", gpu_freq);
+}
+
+static ssize_t store_gpu_oc(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+        int ret;
+        unsigned long gpu_freq = 0;
+        unsigned int i = 0;
+        unsigned long new_gpu_freq = 0;
+ 
+        //all the tables that need to be updated with the new frequencies
+        struct clk *vde = tegra_get_clock_by_name("vde");
+        struct clk *mpe = tegra_get_clock_by_name("mpe");
+        struct clk *two_d = tegra_get_clock_by_name("2d");
+        struct clk *epp = tegra_get_clock_by_name("epp");
+        struct clk *three_d = tegra_get_clock_by_name("3d");
+        struct clk *pll_c = tegra_get_clock_by_name("pll_c");
+        
+        unsigned int array_size = three_d->dvfs->num_freqs;
+
+       /* if (array_size <= 0)
+                return -EINVAL;*
+
+        char cur_size[array_size];
+        i = array_size;
+
+        ret = sscanf(buf, "%lu", &gpu_freq);
+
+        if (ret == 0)
+                        return -EINVAL;*/
+
+        new_gpu_freq = gpu_freq*1000000;
+
+        vde->max_rate = ( new_gpu_freq / 2 );
+        mpe->max_rate = ( new_gpu_freq / 2 );
+        two_d->max_rate = new_gpu_freq;
+        epp->max_rate = ( new_gpu_freq / 2 );
+        three_d->dvfs->freqs[i] = new_gpu_freq;
+        pll_c->max_rate = new_gpu_freq;
+        pr_info("NEW PLL_C MAX_RATE: %lu\n", pll_c->max_rate);
+        mutex_unlock(&dvfs_lock);
+        
+
+        /*ret = sscanf(buf, "%s", cur_size);
+
+        if (ret == 0)
+                return -EINVAL;
+
+        buf += (strlen(cur_size) + 1);*/
+
+        return count;
+}
 
 cpufreq_freq_attr_ro_perm(cpuinfo_cur_freq, 0400);
 cpufreq_freq_attr_ro(cpuinfo_min_freq);
 cpufreq_freq_attr_ro(cpuinfo_max_freq);
+cpufreq_freq_attr_ro(cpuinfo_min_mV);
+cpufreq_freq_attr_ro(cpuinfo_max_mV);
 cpufreq_freq_attr_ro(cpuinfo_transition_latency);
 cpufreq_freq_attr_ro(scaling_available_governors);
 cpufreq_freq_attr_ro(scaling_driver);
@@ -581,27 +737,36 @@ cpufreq_freq_attr_ro(scaling_cur_freq);
 cpufreq_freq_attr_ro(bios_limit);
 cpufreq_freq_attr_ro(related_cpus);
 cpufreq_freq_attr_ro(affected_cpus);
+cpufreq_freq_attr_ro(frequency_voltage_table);
+cpufreq_freq_attr_ro(policy_min_freq);
+cpufreq_freq_attr_ro(policy_max_freq);
 cpufreq_freq_attr_rw(scaling_min_freq);
 cpufreq_freq_attr_rw(scaling_max_freq);
 cpufreq_freq_attr_rw(scaling_governor);
 cpufreq_freq_attr_rw(scaling_setspeed);
-cpufreq_freq_attr_ro(policy_min_freq);
-cpufreq_freq_attr_ro(policy_max_freq);
+cpufreq_freq_attr_rw(UV_mV_table);
+cpufreq_freq_attr_rw(gpu_oc);
+
 
 static struct attribute *default_attrs[] = {
 	&cpuinfo_min_freq.attr,
 	&cpuinfo_max_freq.attr,
+	&cpuinfo_min_mV.attr,
+	&cpuinfo_max_mV.attr,
 	&cpuinfo_transition_latency.attr,
 	&scaling_min_freq.attr,
 	&scaling_max_freq.attr,
 	&affected_cpus.attr,
 	&related_cpus.attr,
+	&frequency_voltage_table.attr,
 	&scaling_governor.attr,
 	&scaling_driver.attr,
 	&scaling_available_governors.attr,
 	&scaling_setspeed.attr,
 	&policy_min_freq.attr,
 	&policy_max_freq.attr,
+	&UV_mV_table.attr,
+	&gpu_oc.attr,
 	NULL
 };
 
@@ -926,11 +1091,18 @@ static int cpufreq_add_dev(struct sys_device *sys_dev)
 
 	/* Set governor before ->init, so that driver could check it */
 #ifdef CONFIG_HOTPLUG_CPU
+
+struct cpufreq_policy *cp;
 	for_each_online_cpu(sibling) {
-		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
+		cp = per_cpu(cpufreq_cpu_data, sibling);
 		if (cp && cp->governor &&
 		    (cpumask_test_cpu(cpu, cp->related_cpus))) {
 			policy->governor = cp->governor;
+			
+			policy->min = cp->min;
+            policy->max = cp->max;
+            policy->user_policy.min = cp->user_policy.min;
+            policy->user_policy.max = cp->user_policy.max;   
 			found = 1;
 			break;
 		}
@@ -949,6 +1121,16 @@ static int cpufreq_add_dev(struct sys_device *sys_dev)
 	policy->user_policy.min = policy->min;
 	policy->user_policy.max = policy->max;
 
+    if (found)
+    {
+        /* Calling the driver can overwrite policy frequencies again */
+       // pr_debug("Overriding policy max and min with sibling settings\n");
+        policy->min = cp->min;
+        policy->max = cp->max;
+        policy->user_policy.min = cp->user_policy.min;
+        policy->user_policy.max = cp->user_policy.max;
+    }
+    
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 				     CPUFREQ_START, policy);
 
@@ -2015,6 +2197,8 @@ static int __init cpufreq_core_init(void)
 {
 	int cpu;
 	int rc;
+	
+	//UV_mV_Ptr = kzalloc(sizeof(int)*(MAX_DVFS_FREQS), GFP_KERNEL); 
 
 	for_each_possible_cpu(cpu) {
 		per_cpu(cpufreq_policy_cpu, cpu) = -1;

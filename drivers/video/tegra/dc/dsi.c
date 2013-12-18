@@ -301,6 +301,19 @@ const u32 init_reg[] = {
 	DSI_PKT_LEN_6_7,
 };
 
+#ifdef CONFIG_OLYMPUS_SYSFS
+extern int sfs_hR2S;
+extern int sfs_vR2S;
+extern int sfs_hSW;
+extern int sfs_vSW;
+extern int sfs_hBP;
+extern int sfs_vBP;
+extern int sfs_hFP;
+extern int sfs_vFP;
+extern int sfs_refresh;
+extern bool dsi_param_changed;
+#endif
+
 static int tegra_dsi_host_suspend(struct tegra_dc *dc);
 static int tegra_dsi_host_resume(struct tegra_dc *dc);
 static void tegra_dc_dsi_idle_work(struct work_struct *work);
@@ -3450,6 +3463,25 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 			}
 		}
 	}
+
+#ifdef CONFIG_OLYMPUS_SYSFS
+	if (dsi_param_changed) {
+		printk(KERN_INFO "%s: reinitiating dsi settings\n", __func__);
+		dc->mode.h_ref_to_sync = sfs_hR2S;
+		dc->mode.v_ref_to_sync = sfs_vR2S;
+		dc->mode.h_sync_width = sfs_hSW;
+		dc->mode.v_sync_width = sfs_vSW;
+		dc->mode.h_back_porch = sfs_hBP;
+		dc->mode.v_back_porch = sfs_vBP;
+		dc->mode.h_front_porch = sfs_hFP;
+		dc->mode.v_front_porch = sfs_vFP;
+		dsi->info.refresh_rate = sfs_refresh;
+		
+		tegra_dsi_init_sw(dc, dsi);
+		dsi_param_changed = false;
+	}
+#endif
+
 fail:
 	mutex_unlock(&dsi->lock);
 	tegra_dc_io_end(dc);
