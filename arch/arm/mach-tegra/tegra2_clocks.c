@@ -161,7 +161,7 @@ static void __iomem *misc_gp_hidrev_base = IO_ADDRESS(TEGRA_APB_MISC_BASE);
 #define MISC_GP_HIDREV			0x804
 #define PLLDU_LFCON_SET_DIVN		600
 
-#define MAX_CPU 1400000000
+#define MAX_CPU 1200000000
 #define MAX_GPU 686000000
 #define MAX_AVP 400000000
 
@@ -1730,10 +1730,10 @@ static struct clk_pll_freq_table tegra_pll_c_freq_table[] = {
 	{ 19200000, 598000000, 375, 12, 1, 6},
 	{ 26000000, 598000000, 598, 26, 1, 8},
 	// overclock pll_c
-	{ 12000000, 800000000, 800, 12, 1, 8},
-	{ 13000000, 800000000, 800, 13, 1, 8},
-	{ 19200000, 800000000, 500, 12, 1, 6},
-	{ 26000000, 800000000, 800, 26, 1, 8},	
+	{ 12000000, 685000000, 685, 12, 1, 8},
+	{ 13000000, 685000000, 685, 13, 1, 8},
+	{ 19200000, 685000000, 429, 12, 1, 6},
+	{ 26000000, 685000000, 685, 26, 1, 8},	
 	{ 0, 0, 0, 0, 0, 0 },
 };
 
@@ -1743,7 +1743,7 @@ static struct clk tegra_pll_c = {
 	.ops       = &tegra_pll_ops,
 	.reg       = 0x80,
 	.parent    = &tegra_clk_m,
-	.max_rate  = 800000000,
+	.max_rate  = 685000000,
 	.u.pll = {
 		.input_min = 2000000,
 		.input_max = 31000000,
@@ -1763,7 +1763,7 @@ static struct clk tegra_pll_c_out1 = {
 	.parent    = &tegra_pll_c,
 	.reg       = 0x84,
 	.reg_shift = 0,
-	.max_rate  = 800000000,
+	.max_rate  = 685000000,
 };
 
 static struct clk_pll_freq_table tegra_pll_m_freq_table[] = {
@@ -1999,12 +1999,12 @@ static struct clk tegra_pll_u = {
 };
 
 static struct clk_pll_freq_table tegra_pll_x_freq_table[] = {
-	/* 1.4 GHz */
+	/* 1.4 GHz *//*
 	{ 12000000, 1400000000, 700,  6,  1, 12},
 	{ 13000000, 1400000000, 969,  9, 1, 12},
 	{ 19200000, 1400000000, 875,  12, 1, 8},
 	{ 26000000, 1400000000, 700,  13, 1, 12},
-	
+	*/
 	/* 1.3 GHz */
 	{ 12000000, 1300000000, 650,  6,  1, 12},
 	{ 13000000, 1300000000, 800,  8, 1, 12},
@@ -2069,7 +2069,7 @@ static struct clk tegra_pll_x = {
 		.cf_min    = 1000000,
 		.cf_max    = 6000000,
 		.vco_min   = 20000000,
-		.vco_max   = 1200000000,
+		.vco_max   = 1400000000,
 		.freq_table = tegra_pll_x_freq_table,
 		.lock_delay = 300,
 	},
@@ -2738,7 +2738,7 @@ static struct cpufreq_frequency_table freq_table_1p2GHz[] = {
 	{ 7, CPUFREQ_TABLE_END },
 };
 
-static struct cpufreq_frequency_table freq_table_1p4GHz[] = {
+static struct cpufreq_frequency_table freq_table_1p3GHz[] = {
 	{ 0, 192000 },
 	{ 1, 456000 },
 	{ 2, 608000 },
@@ -2746,7 +2746,7 @@ static struct cpufreq_frequency_table freq_table_1p4GHz[] = {
 	{ 4, 912000 },
 	{ 5, 1000000 },
 	{ 6, 1200000 },
-	{ 7, 1400000 },
+	{ 7, 1300000 },
 	{ 8, CPUFREQ_TABLE_END },
 };
 
@@ -2755,7 +2755,7 @@ static struct tegra_cpufreq_table_data cpufreq_tables[] = {
 	{ freq_table_750MHz, 1, 2 },
 	{ freq_table_1p0GHz, 2, 6 },
 	{ freq_table_1p2GHz, 2, 7 },
-	{ freq_table_1p4GHz, 2, 8 },
+	{ freq_table_1p3GHz, 2, 8 },
 };
 
 struct tegra_cpufreq_table_data *tegra_cpufreq_table_get(void)
