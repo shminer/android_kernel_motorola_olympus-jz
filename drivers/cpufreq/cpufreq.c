@@ -38,7 +38,7 @@
 /* try to add gpu oc */
 static DEFINE_MUTEX(dvfs_lock);
 
-/* user voltage control */
+/* user voltagfe control */
 /*
 #define FREQCOUNT 8
 #define CPUMVMAX 1300
@@ -46,7 +46,7 @@ static DEFINE_MUTEX(dvfs_lock);
 
 
 int cpufrequency[FREQCOUNT] = {1300,1200,1000,912,816,608,456,192};
-int cpuvoltage[FREQCOUNT] = {1250,1120,1000,950,900,850,800,750};
+int cpuvoltage[FREQCOUNT] = {1250,1120,1000,950,850,800,780,750};
 int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0, 0};
 */
 /* user voltage control */
@@ -57,7 +57,7 @@ int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0, 0};
 
 
 int cpufrequency[FREQCOUNT] = {1200,1000,912,816,608,456,192};
-int cpuvoltage[FREQCOUNT] = {1120,1000,950,900,850,800,750};
+int cpuvoltage[FREQCOUNT] =   {1120,1000,950,850,800,780,750};
 int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0};
 
 /* user voltage control */
@@ -68,7 +68,7 @@ int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0};
 
 
 int cpufrequency[FREQCOUNT] = {1000,912,816,608,456,192};
-int cpuvoltage[FREQCOUNT] = {1000,950,900,850,800,750};
+int cpuvoltage[FREQCOUNT] = {1000,950,850,800,780,750};
 int cpuuvoffset[FREQCOUNT] = {0, 0, 0, 0, 0, 0};
 */
 /**
@@ -650,7 +650,7 @@ static ssize_t store_UV_mV_table(struct cpufreq_policy *policy, char *buf, size_
 	unsigned int ret = sscanf(buf, "%d %d %d %d %d %d %d", &tmptable[0], &tmptable[1], &tmptable[2], &tmptable[3], &tmptable[4], &tmptable[5], &tmptable[6], &tmptable[7]);
 	if (ret != FREQCOUNT)
 		return -EINVAL;
-	for (i = 0; i != FREQCOUNT; i++)
+	for (i = 0; i < FREQCOUNT; i++)
 	{
 		if ((cpuvoltage[i]-tmptable[i]) > CPUMVMAX || (cpuvoltage[i]-tmptable[i]) < CPUMVMIN) // Keep within constraints
 			return -EINVAL;
