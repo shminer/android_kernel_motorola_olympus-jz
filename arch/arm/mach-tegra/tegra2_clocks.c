@@ -161,9 +161,9 @@ static void __iomem *misc_gp_hidrev_base = IO_ADDRESS(TEGRA_APB_MISC_BASE);
 #define MISC_GP_HIDREV			0x804
 #define PLLDU_LFCON_SET_DIVN		600
 
-#define MAX_CPU 1200000000
-#define MAX_GPU 686000000
-#define MAX_AVP 400000000
+#define MAX_CPU 1000000000
+#define MAX_GPU 300000000
+#define MAX_AVP 300000000
 
 static int tegra2_clk_shared_bus_update(struct clk *bus);
 

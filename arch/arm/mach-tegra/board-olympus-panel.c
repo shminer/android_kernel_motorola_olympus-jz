@@ -408,8 +408,8 @@ static struct tegra_dc_out olympus_disp1_out = {
 	.align		= TEGRA_DC_ALIGN_MSB, //0
 	.order		= TEGRA_DC_ORDER_RED_BLUE, //0
 
-	.height		= 160, //93/* mm */
-	.width 		= 100, //52/* mm */
+	.height		= 93/* mm */
+	.width 		= 52/* mm */
 
 	.modes 		= olympus_panel_modes,
 	.n_modes 	= ARRAY_SIZE(olympus_panel_modes),
