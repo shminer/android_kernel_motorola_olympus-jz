@@ -147,7 +147,7 @@ void __init olympus_uart_init(void)
 	}
 	olympus_uart_pdata[0].parent_clk_list = uart_parent_clk;
 	olympus_uart_pdata[0].parent_clk_count = ARRAY_SIZE(uart_parent_clk);
-
+    olympus_uart_pdata[0].is_loopback = false;
 	olympus_uart_pdata[1].parent_clk_list = uart_parent_clk;
 	olympus_uart_pdata[1].parent_clk_count = ARRAY_SIZE(uart_parent_clk);
 
@@ -159,7 +159,7 @@ void __init olympus_uart_init(void)
 
 	olympus_uart_pdata[3].parent_clk_list = uart_parent_clk;
 	olympus_uart_pdata[3].parent_clk_count = ARRAY_SIZE(uart_parent_clk);
-
+    olympus_uart_pdata[3].is_loopback = false;
 	tegra_uarta_device.dev.platform_data = &olympus_uart_pdata[0];
 	tegra_uartb_device.dev.platform_data = &olympus_uart_pdata[1];
 	tegra_uartc_device.dev.platform_data = &olympus_uart_pdata[2];
