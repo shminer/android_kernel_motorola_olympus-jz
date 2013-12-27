@@ -770,7 +770,7 @@ void __init tegra_protected_aperture_init(unsigned long aperture)
  * highmem, or outside the memory map) to a physical address that is outside
  * the memory map.
  */
-/*
+
 void tegra_move_framebuffer(unsigned long to, unsigned long from,
 	unsigned long size)
 {
@@ -823,7 +823,7 @@ void tegra_move_framebuffer(unsigned long to, unsigned long from,
 out:
 	iounmap(to_io);
 }
-*/
+/*
 unsigned int to_rgb888(unsigned int temp)
 	{
 	unsigned int red, green, blue;
@@ -882,7 +882,7 @@ unsigned int to_rgb888(unsigned int temp)
     out:
             iounmap(to_io);
     }
-
+*/
 
 void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 	unsigned long fb2_size)

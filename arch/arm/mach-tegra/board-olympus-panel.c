@@ -408,8 +408,8 @@ static struct tegra_dc_out olympus_disp1_out = {
 	.align		= TEGRA_DC_ALIGN_MSB, //0
 	.order		= TEGRA_DC_ORDER_RED_BLUE, //0
 
-	.height		= 91, /* mm */
-	.width 		= 51, /* mm */
+	.height		= 160, //93/* mm */
+	.width 		= 100, //52/* mm */
 
 	.modes 		= olympus_panel_modes,
 	.n_modes 	= ARRAY_SIZE(olympus_panel_modes),
@@ -666,7 +666,7 @@ int __init olympus_panel_init(void)
 	res->end = tegra_fb_start + tegra_fb_size - 1;
 
 	tegra_move_framebuffer(tegra_fb_start,tegra_bootloader_fb_start,
-			tegra_fb_size, tegra_bootloader_fb_size);
+			min(tegra_fb_size, tegra_bootloader_fb_size));
 
 	res = nvhost_get_resource_byname(&olympus_disp2_device,
 		IORESOURCE_MEM, "fbmem");
