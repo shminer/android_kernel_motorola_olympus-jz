@@ -130,7 +130,7 @@ static struct resource olympus_disp2_resources[] = {
 	},
 };
 
-static struct tegra_dc_mode olympus_panel_modes_for_0x8[] = {
+static struct tegra_dc_mode olympus_panel_modes[] = {
 	{
 		.pclk = 27000000,
 		.h_ref_to_sync = 1,//2
@@ -143,21 +143,6 @@ static struct tegra_dc_mode olympus_panel_modes_for_0x8[] = {
 		.v_active = 960,
 		.h_front_porch = 28,// good 22
 		.v_front_porch = 2,//3
-	},
-};
-static struct tegra_dc_mode olympus_panel_modes[] = {
-	{
-		.pclk = 27000000,
-		.h_ref_to_sync = 4,
-		.v_ref_to_sync = 1,
-		.h_sync_width = 16,
-		.v_sync_width = 1,
-		.h_back_porch = 32,
-		.v_back_porch = 1,
-		.h_active = 540,
-		.v_active = 960,
-		.h_front_porch = 32,
-		.v_front_porch = 2,
 	},
 };
 
@@ -298,7 +283,7 @@ static int olympus_panel_enable(void)
 {
 	int ret;
 
-	printk(KERN_INFO "%s: DSI regulator vcsi enabling\n",__func__);
+	//printk(KERN_INFO "%s: DSI regulator vcsi enabling\n",__func__);
 	if (!olympus_dsi_reg) {
 		olympus_dsi_reg = regulator_get(NULL, "vcsi");
 		if (IS_ERR_OR_NULL(olympus_dsi_reg)) {
@@ -312,10 +297,10 @@ static int olympus_panel_enable(void)
 				"Ninja: DSI regulator vcsi could not be enabled\n");
 			return ret;
 		}
-		printk(KERN_INFO "%s: DSI regulator vcsi enabled",__func__);
+		//printk(KERN_INFO "%s: DSI regulator vcsi enabled",__func__);
 	}
 
-	printk(KERN_INFO "%s: DSI regulator SW5 enabling\n",__func__);
+	//printk(KERN_INFO "%s: DSI regulator SW5 enabling\n",__func__);
 	if (!olympus_SW5) {
 		olympus_SW5 = regulator_get(NULL, "sw5"); /* SW5 */
 		if (IS_ERR_OR_NULL(olympus_SW5)) {
@@ -329,15 +314,15 @@ static int olympus_panel_enable(void)
 				"Ninja: DSI regulator SW5 could not be enabled\n");
 			return ret;
 		}
-		printk(KERN_INFO "%s: DSI regulator SW5 enabled\n",__func__);
+		//printk(KERN_INFO "%s: DSI regulator SW5 enabled\n",__func__);
     }
 
-	printk(KERN_INFO "%s: TEGRA_GPIO_PF7 = 1",__func__);
+	//printk(KERN_INFO "%s: TEGRA_GPIO_PF7 = 1",__func__);
 	gpio_set_value(TEGRA_GPIO_PF7,1);
 	msleep_interruptible(50);
-	printk(KERN_INFO "%s: TEGRA_GPIO_PE3 = 1",__func__);
+	//printk(KERN_INFO "%s: TEGRA_GPIO_PE3 = 1",__func__);
 	gpio_set_value(TEGRA_GPIO_PE3, 1);
-	msleep_interruptible(25);
+	//msleep_interruptible(25);
 
 	return 0;
 }
@@ -347,13 +332,13 @@ static int olympus_panel_disable(void)
 	int ret;
 
 	msleep_interruptible(25);
-	printk(KERN_INFO "%s: TEGRA_GPIO_PE3 = 0",__func__);
+	//printk(KERN_INFO "%s: TEGRA_GPIO_PE3 = 0",__func__);
 	gpio_set_value(TEGRA_GPIO_PE3, 0);
 	msleep_interruptible(25);
-	printk(KERN_INFO "%s: TEGRA_GPIO_PF7 = 0",__func__);
+	//printk(KERN_INFO "%s: TEGRA_GPIO_PF7 = 0",__func__);
 	gpio_set_value(TEGRA_GPIO_PF7, 0);
 
-	printk(KERN_INFO "%s: DSI regulator vcsi disabling\n",__func__);
+	//printk(KERN_INFO "%s: DSI regulator vcsi disabling\n",__func__);
 	if (olympus_dsi_reg) {
 		ret = regulator_disable(olympus_dsi_reg);
 		if (ret < 0) {
@@ -363,9 +348,9 @@ static int olympus_panel_disable(void)
 		}
 		regulator_put(olympus_dsi_reg);  
 		olympus_dsi_reg = NULL;
-		printk(KERN_INFO "%s: DSI regulator vcsi disabled\n",__func__);
+		//printk(KERN_INFO "%s: DSI regulator vcsi disabled\n",__func__);
 	}
-	printk(KERN_INFO "%s: DSI regulator SW5 disabling\n",__func__);
+	//printk(KERN_INFO "%s: DSI regulator SW5 disabling\n",__func__);
 	if (olympus_SW5) {
        		ret = regulator_disable(olympus_SW5);
 		if (ret < 0) {
@@ -375,7 +360,7 @@ static int olympus_panel_disable(void)
 		}
 		regulator_put(olympus_SW5);
 		olympus_SW5 = NULL;
-		printk(KERN_INFO "%s: DSI regulator SW5 disabled\n",__func__);
+		//printk(KERN_INFO "%s: DSI regulator SW5 disabled\n",__func__);
 	}
 
 
@@ -387,8 +372,9 @@ static struct tegra_dsi_out olympus_dsi_out = {
 		.n_data_lanes = 2,
 		.refresh_rate = 60,
 		.lp_cmd_mode_freq_khz = 229500,
+		.enable_hs_clock_on_lp_cmd_mode = true,
 		.panel_reset = true,	/* resend the init sequence on each resume */
-		.panel_reset_timeout_msec = 202,
+		.panel_reset_timeout_msec = 50, //202,
 		.panel_has_frame_buffer = true,
 		.power_saving_suspend = true,	/* completely shutdown the panel */
 		.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
@@ -408,8 +394,8 @@ static struct tegra_dc_out olympus_disp1_out = {
 	.align		= TEGRA_DC_ALIGN_MSB, //0
 	.order		= TEGRA_DC_ORDER_RED_BLUE, //0
 
-	.height		= 93/* mm */
-	.width 		= 52/* mm */
+	.height		= 91, /* mm */
+	.width 		= 51, /* mm */
 
 	.modes 		= olympus_panel_modes,
 	.n_modes 	= ARRAY_SIZE(olympus_panel_modes),
@@ -577,18 +563,11 @@ static struct platform_device *olympus_gfx_devices[] __initdata = {
  */
 struct early_suspend olympus_panel_early_suspender;
 
-static u8 bkp_suspend_aggr=99;
-
 static void olympus_panel_early_suspend(struct early_suspend *h)
 {
 	int i;
 
-	printk(KERN_INFO "%s: here...\n", __func__);
 //	tegra2_enable_autoplug();
-	if (tegra_is_voice_call_active()) {
-		bkp_suspend_aggr = olympus_dsi_out.suspend_aggr;
-		olympus_dsi_out.suspend_aggr = DSI_HOST_SUSPEND_LV2;
-	}
 
 	for (i = 0; i < num_registered_fb; i++)
 		fb_blank(registered_fb[i], FB_BLANK_POWERDOWN);
@@ -606,16 +585,14 @@ static void olympus_panel_late_resume(struct early_suspend *h)
 #ifdef CONFIG_TEGRA_CONVSERVATIVE_GOV_ON_EARLYSUPSEND
 	cpufreq_restore_default_gov();
 #endif
-	printk(KERN_INFO "%s: here...\n", __func__);
+	//printk(KERN_INFO "%s: here...\n", __func__);
 	for (i = 0; i < num_registered_fb; i++)
 		fb_blank(registered_fb[i], FB_BLANK_UNBLANK);
-	if (bkp_suspend_aggr != 99) {
-			olympus_dsi_out.suspend_aggr = bkp_suspend_aggr;
-			bkp_suspend_aggr = 99;
-		}
 //	tegra2_disable_autoplug();
 }
 #endif
+
+extern int olympus_mem;
 
 int __init olympus_panel_init(void)
 {
@@ -628,8 +605,6 @@ int __init olympus_panel_init(void)
 
 	// Lets check if we have buggy tegra
 	if ((s_MotorolaDispInfo >> 31) & 0x01) {
-		olympus_disp1_out.modes  = olympus_panel_modes_for_0x8;
-		olympus_disp1_out.n_modes = ARRAY_SIZE(olympus_panel_modes_for_0x8);
 	}
 	if (((s_MotorolaDispInfo >> 9) & 0x07) > 1) {
 		olympus_dsi_out.dsi_init_cmd = dsi_olympus_init_cmd_es4;
@@ -683,6 +658,3 @@ int __init olympus_panel_init(void)
 	return err;
 
 }
-
-
-

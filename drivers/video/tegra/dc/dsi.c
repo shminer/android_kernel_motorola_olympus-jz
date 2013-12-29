@@ -310,7 +310,6 @@ extern int sfs_hBP;
 extern int sfs_vBP;
 extern int sfs_hFP;
 extern int sfs_vFP;
-extern int sfs_refresh;
 extern bool dsi_param_changed;
 #endif
 
@@ -3475,8 +3474,6 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 		dc->mode.v_back_porch = sfs_vBP;
 		dc->mode.h_front_porch = sfs_hFP;
 		dc->mode.v_front_porch = sfs_vFP;
-		dsi->info.refresh_rate = sfs_refresh;
-		
 		tegra_dsi_init_sw(dc, dsi);
 		dsi_param_changed = false;
 	}

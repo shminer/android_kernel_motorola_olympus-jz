@@ -750,7 +750,7 @@ static ssize_t enable_3d_scaling_show(struct device *device,
 static ssize_t enable_3d_scaling_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	unsigned long val = 1;
+	unsigned long val = 0;
 
 	if (strict_strtoul(buf, 10, &val) < 0)
 		return -EINVAL;

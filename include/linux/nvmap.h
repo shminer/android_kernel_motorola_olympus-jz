@@ -23,6 +23,7 @@
 #include <linux/ioctl.h>
 #include <linux/file.h>
 #include <linux/rbtree.h>
+#include <linux/dma-buf.h>
 
 #if !defined(__KERNEL__)
 #define __user
@@ -61,6 +62,15 @@ struct nvmap_device;
 /* Convert User space handle to Kernel. */
 #define nvmap_convert_handle_u2k(h) (h)
 
+#ifdef USE_NVMAP_MAGIC
+#define NVMAP_MAGIC 0xabab4321
+#define NVMAP_MAGIC_ALLOC(p) do{(*(u32*)p)=NVMAP_MAGIC;}while(0)
+#define NVMAP_MAGIC_FREE(p) do{(*(u32*)p)=0;}while(0)
+#else
+#define NVMAP_MAGIC_ALLOC(p) while(0)
+#define NVMAP_MAGIC_FREE(p) while(0)
+#endif
+
 /* handle_ref objects are client-local references to an nvmap_handle;
  * they are distinct objects so that handles can be unpinned and
  * unreferenced the correct number of times when a client abnormally
@@ -97,12 +107,20 @@ struct nvmap_client *nvmap_create_client(struct nvmap_device *dev,
 struct nvmap_handle_ref *nvmap_alloc(struct nvmap_client *client, size_t size,
 				     size_t align, unsigned int flags,
 				     unsigned int heap_mask);
+				     
+phys_addr_t _nvmap_get_addr_from_id(u32 id);
 
 void nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r);
+
+void _nvmap_free(struct nvmap_client *client, struct nvmap_handle_ref *r);
 
 void *nvmap_mmap(struct nvmap_handle_ref *r);
 
 void nvmap_munmap(struct nvmap_handle_ref *r, void *addr);
+
+void *nvmap_kmap(struct nvmap_handle_ref *r, unsigned int pagenum);
+
+void nvmap_kunmap(struct nvmap_handle_ref *r, unsigned int pagenum,void *addr);
 
 struct nvmap_client *nvmap_client_get_file(int fd);
 
@@ -111,6 +129,7 @@ struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
 void nvmap_client_put(struct nvmap_client *c);
 
 phys_addr_t nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *r);
+phys_addr_t _nvmap_pin(struct nvmap_client *c, struct nvmap_handle_ref *r);
 
 phys_addr_t nvmap_handle_address(struct nvmap_client *c, unsigned long id);
 
@@ -121,6 +140,19 @@ void nvmap_unpin_handles(struct nvmap_client *client,
 
 struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 						   unsigned long id);
+
+struct nvmap_handle_ref *_nvmap_duplicate_handle_id(struct nvmap_client *client,
+						   unsigned long id);
+
+int nvmap_pin_array(struct nvmap_client *client,
+		unsigned long	 *ids,
+		long unsigned id_type_mask,
+		long unsigned id_type,
+		int nr,
+		struct nvmap_handle **unique_arr,
+		struct nvmap_handle_ref **unique_arr_refs);
+
+
 
 struct nvmap_platform_carveout {
 	const char *name;
@@ -136,6 +168,17 @@ struct nvmap_platform_data {
 };
 
 extern struct nvmap_device *nvmap_dev;
+
+#ifdef CONFIG_DMA_SHARED_BUFFER
+/* dma-buf exporter */
+struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client, u32 id);
+#else
+static inline struct dma_buf *nvmap_share_dmabuf(struct nvmap_client *client,
+						 u32 id)
+{
+	return NULL;
+}
+#endif	/* !CONFIG_DMA_SHARED_BUFFER */
 
 #endif
 
