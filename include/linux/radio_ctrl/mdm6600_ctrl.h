@@ -56,6 +56,8 @@ struct mdm_command_gpios {
 };
 
 struct mdm_ctrl_platform_data {
+	
+	int  bootmode;
 	struct mdm_ctrl_gpio gpios[MDM_CTRL_NUM_GPIOS];
 	struct mdm_command_gpios cmd_gpios;
 };
