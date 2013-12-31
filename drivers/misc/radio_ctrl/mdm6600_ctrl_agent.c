@@ -166,6 +166,11 @@ static ssize_t mdm_user_command(struct radio_dev *rdev, char *post_strip)
 	return 0;
 }
 
+
+static DEVICE_ATTR(status, 0444, mdm_status_show, NULL);
+static DEVICE_ATTR(power_status, 0444, mdm_power_show, NULL);
+static DEVICE_ATTR(command, 0200, NULL, mdm_user_command);
+
 static unsigned int mdm_gpio_get_value(struct mdm_ctrl_gpio gpio)
 {
 	return gpio_get_value(gpio.number);
