@@ -147,29 +147,24 @@ static ssize_t mdm_power_show(struct radio_dev *rdev, char *buff)
 static ssize_t mdm_user_command(struct radio_dev *rdev, char *post_strip)
 {
 
-	pr_info("%s: user command = %s\n", mdmctrl, post_strip);
+        pr_info("%s: user command = %s\n", mdmctrl, post_strip);
 
-	if (strcmp(post_strip,"shutdown") == 0) {
-		mdm_ctrl_shutdown(NULL);
-	} else if (strcmp(post_strip,"powerup") == 0) {
-		mdm_ctrl_powerup();
-	} else if (strcmp(post_strip,"bootmode_normal") == 0) {
-		mdm_ctrl.pdata->bootmode = BOOTMODE_NORMAL;
-	} else if (strcmp(post_strip,"bootmode_flash") == 0) {
-		mdm_ctrl.pdata->bootmode = BOOTMODE_FLASH;
-	} else if (strcmp(post_strip,"dump_log") == 0) {
-		mdm_ctrl_dump_log();
-	} else {
-		return -EINVAL;
-	}
+        if (strcmp(post_strip,"shutdown") == 0) {
+                mdm_ctrl_shutdown(NULL);
+        } else if (strcmp(post_strip,"powerup") == 0) {
+                mdm_ctrl_powerup();
+        } else if (strcmp(post_strip,"bootmode_normal") == 0) {
+                mdm_ctrl_set_bootmode(0);
+        } else if (strcmp(post_strip,"bootmode_flash") == 0) {
+                mdm_ctrl_set_bootmode(1);
+        } else if (strcmp(post_strip,"dump_log") == 0) {
+                mdm_ctrl_dump_log();
+        } else {
+                return -EINVAL;
+        }
 
-	return 0;
+        return 0;
 }
-
-
-static DEVICE_ATTR(status, 0444, mdm_status_show, NULL);
-static DEVICE_ATTR(power_status, 0444, mdm_power_show, NULL);
-static DEVICE_ATTR(command, 0200, NULL, mdm_user_command);
 
 static unsigned int mdm_gpio_get_value(struct mdm_ctrl_gpio gpio)
 {
@@ -222,8 +217,8 @@ static unsigned int get_bp_status(void)
 	mutex_unlock(&mdm_ctrl_info_lock);
 
 	status = ((bp_status[2] & 0x1) << 2) |
-		     ((bp_status[1] & 0x1) << 1) |
-		      (bp_status[0] & 0x1);
+		 ((bp_status[1] & 0x1) << 1) |
+		  (bp_status[0] & 0x1);
 
 	return status;
 }
@@ -487,43 +482,6 @@ static int __devinit mdm_ctrl_probe(struct platform_device *pdev)
 	dev_info(&pdev->dev, "mdm_ctrl_probe");
 
 	pr_debug("%s: radio_cdev = %p\n", __func__, &radio_cdev);
-	
-	if (alloc_chrdev_region(&dev_number, 0, 1, "mdm_ctrl") < 0) {
-		dev_err(&pdev->dev, "Can't register new device.");
-		return -1;
-	}
-	
-	/* /sys/class/radio */
-	radio_cls = class_create(THIS_MODULE, "radio");
-	if (IS_ERR(radio_cls)) {
-		dev_err(&pdev->dev, "Failed to create radio class.");
-		goto err_cls;
-	}
-	
-	
-	/* /sys/class/radio/mdm6600 */
-	mdm_dev = device_create(radio_cls, NULL, dev_number, NULL, "mdm6600");
-	if (IS_ERR(mdm_dev)) {
-        dev_err(&pdev->dev, "Failed to create mdm_dev.");
-        goto err_mdm;
-      }
-      
-    /* /sys/class/radio/mdm6600/status */
-    if (device_create_file(mdm_dev, &dev_attr_status) > 0) {
-       dev_err(&pdev->dev, "Failed to create status sysfile.");
-        goto err_status;
-      }
-    /* /sys/class/radio/mdm6600/power_status */
-    if (device_create_file(mdm_dev, &dev_attr_power_status) > 0) {
-        dev_err(&pdev->dev, "Failed to create power sysfile .");
-        goto err_power;
-      }
-
-    /* /sys/class/radio/mdm6600/command */
-    if (device_create_file(mdm_dev, &dev_attr_command) > 0) {
-        dev_err(&pdev->dev, "Failed to create command sysfile.");
-        goto err_command;
-      }
 
 	for (i = 0; i < MDM_CTRL_NUM_GPIOS; i++) {
 		if (mdm_gpio_setup(&pdata->gpios[i])) {
@@ -549,7 +507,7 @@ static int __devinit mdm_ctrl_probe(struct platform_device *pdev)
 		goto err_setup;
 	}
 
-	mdm_ctrl.pdata->bootmode = BOOTMODE_NORMAL;
+	mdm_ctrl_set_bootmode(0);
     mdm_ctrl_powerup();
 	update_bp_status();
 	register_reboot_notifier(&mdm6600_reboot_notifier);
@@ -569,30 +527,6 @@ probe_cleanup:
 	return -1;
 }
 
-err_command:
-        device_remove_file(mdm_dev, &dev_attr_command);
-
-err_power:
-        device_remove_file(mdm_dev, &dev_attr_power_status);
-
-err_status:
-        device_remove_file(mdm_dev, &dev_attr_status);
-
-err_mdm:
-        if (!IS_ERR_OR_NULL(mdm_dev)) {
-                device_destroy(radio_cls, dev_number);
-                mdm_dev = NULL;
-        }
-
-err_cls:
-        if (!IS_ERR_OR_NULL(radio_cls)) {
-                class_destroy(radio_cls);
-                radio_cls = NULL;
-        }
-
-        return -1;
-}
-
 static int __devexit mdm_ctrl_remove(struct platform_device *pdev)
 {
 	int i;
@@ -609,22 +543,6 @@ static int __devexit mdm_ctrl_remove(struct platform_device *pdev)
 
 	for (i = 0; i < MDM_CTRL_NUM_GPIOS; i++)
 		mdm_gpio_free(&pdata->gpios[i]);
-		
-		/* sysfs remove*/
-	    device_remove_file(mdm_dev, &dev_attr_command);
-        device_remove_file(mdm_dev, &dev_attr_power_status);
-        device_remove_file(mdm_dev, &dev_attr_status);
-
-        if (!IS_ERR_OR_NULL(mdm_dev)) {
-                device_destroy(radio_cls, dev_number);
-                mdm_dev = NULL;
-        }
-
-        if (!IS_ERR_OR_NULL(radio_cls)) {
-                class_destroy(radio_cls);
-                radio_cls = NULL;
-        }
-
 
 	return 0;
 }
@@ -654,10 +572,7 @@ static unsigned int __devexit bp_shutdown_wait(unsigned int delay_sec)
 			pr_info("%s: Modem powered off.", mdmctrl);
 			pd_failure = 0;
 			break;
-		} else {
-            dev_info(&pdev->dev, "Modem status %s [0x%x]\n",
-            bp_status_string(bp_status), bp_status);
-               }
+		}
 		msleep(LOOP_DELAY_TIME_MS);
 	}
 	set_bp_pwron(0);
@@ -697,7 +612,7 @@ mutex_lock(&mdm_power_lock);
 	/* one more time, ultimately the modem will be   */
 	/* hard powered off */
 	pd_failure = bp_shutdown_wait(5);
-	//set_bp_pwron(0);
+	set_bp_pwron(0);
 	if (pd_failure) {
 		pr_err("%s: Resetting unresponsive modem.\n", mdmctrl);
 		set_bp_resin(1);
