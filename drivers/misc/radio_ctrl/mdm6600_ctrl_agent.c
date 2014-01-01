@@ -375,6 +375,7 @@ static void mdm_ctrl_powerup(void)
 		}
 		msleep(400);
 	}
+	 mutex_unlock(&mdm_power_lock);
 
 	
 	/* now let user handles bp status change through uevent */
@@ -471,7 +472,7 @@ static struct radio_dev radio_cdev = {
 	.name = "mdm6600",
 	.power_status = mdm_power_show,
 	.status = mdm_status_show,
-        .command = mdm_user_command,
+    .command = mdm_user_command,
 };
 
 static int __devinit mdm_ctrl_probe(struct platform_device *pdev)
@@ -494,7 +495,7 @@ static int __devinit mdm_ctrl_probe(struct platform_device *pdev)
 	working_queue = create_singlethread_workqueue("mdm_ctrl_wq");
 	if (!working_queue) {
 		dev_err(&pdev->dev, "Cannot create work queue.");
-		goto probe_err;
+		goto probe_cleanup;
 	}
 
 	if (mdm_gpio_setup_internal(pdata) < 0) {
@@ -516,10 +517,8 @@ static int __devinit mdm_ctrl_probe(struct platform_device *pdev)
 
 err_setup:
 	mdm_gpio_cleanup_internal();
-
-probe_err:
 	destroy_workqueue(working_queue);
-
+	
 probe_cleanup:
 	for (i = 0; i < MDM_CTRL_NUM_GPIOS; i++)
 		mdm_gpio_free(&pdata->gpios[i]);
@@ -584,7 +583,7 @@ static void __devexit mdm_ctrl_shutdown(struct platform_device *pdev)
 	unsigned int pd_failure;
 	unsigned int bp_status;
   
-mutex_lock(&mdm_power_lock);
+    mutex_lock(&mdm_power_lock);
 	if (get_bp_power_status() == 0) {
 		pr_err("%s: modem already powered down.\n", mdmctrl);
 		mutex_unlock(&mdm_power_lock);
@@ -612,7 +611,7 @@ mutex_lock(&mdm_power_lock);
 	/* one more time, ultimately the modem will be   */
 	/* hard powered off */
 	pd_failure = bp_shutdown_wait(5);
-	set_bp_pwron(0);
+	//set_bp_pwron(0);
 	if (pd_failure) {
 		pr_err("%s: Resetting unresponsive modem.\n", mdmctrl);
 		set_bp_resin(1);
