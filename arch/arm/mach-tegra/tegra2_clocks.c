@@ -152,7 +152,7 @@
 
 #define AP25_EMC_BRIDGE_RATE		380000000
 #define AP25_EMC_INTERMEDIATE_RATE	760000000
-#define AP25_EMC_SCALING_STEP		650000000
+#define AP25_EMC_SCALING_STEP		600000000
 
 static void __iomem *reg_clk_base = IO_ADDRESS(TEGRA_CLK_RESET_BASE);
 static void __iomem *reg_pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
@@ -162,8 +162,8 @@ static void __iomem *misc_gp_hidrev_base = IO_ADDRESS(TEGRA_APB_MISC_BASE);
 #define PLLDU_LFCON_SET_DIVN		600
 
 #define MAX_CPU 1200000000
-#define MAX_GPU 500000000
-#define MAX_AVP 400000000
+#define MAX_GPU 651000000
+#define MAX_AVP 450000000
 
 static int tegra2_clk_shared_bus_update(struct clk *bus);
 

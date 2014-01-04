@@ -300,50 +300,25 @@ static void set_bp_resin(int on)
 	mutex_unlock(&mdm_ctrl_info_lock);
 }
 
-static void update_bp_status(void)
-{
-	int bp_status_prev_idx = bp_status_idx;
-	int i;
-	int bp_power_prev_idx = bp_power_idx;
+static void update_bp_status(void) {
 
+	static int bp_status_prev_idx = BP_STATUS_UNDEFINED;
+
+	bp_status_prev_idx = bp_status_idx;
 	bp_status_idx = get_bp_status();
-	/* No CDMA network when first power on after upgrade the software,
-	 * because the bp status is not right, so wait for bp ready status
-	 * when first powerup, becaue BP will execute restore RF. It will
-	 * take about 30~40 seconds, so AP should wait 50s for the bp status
-	 * changes from undefined status to awake status.
-	 */
-	if (bp_status_prev_idx == BP_STATUS_UNDEFINED) {
-		for (i = 0; i < 100; i++) {
-			if (bp_status_idx != BP_STATUS_PANIC)
-				break;
-			msleep(500);
-			bp_status_idx = get_bp_status();
-		}
-	}
 	bp_power_idx = get_bp_power_status();
 
-	if (bp_power_idx == bp_power_prev_idx)
-		pr_debug("%s: modem status: %s -> %s [power %s]\n", mdmctrl,
-			bp_status_string(bp_status_prev_idx),
-			bp_status_string(bp_status_idx),
-			bp_power_state_string(bp_power_idx));
-	else
-		pr_info("%s: modem status: %s -> %s [power %s]\n", mdmctrl,
-			bp_status_string(bp_status_prev_idx),
-			bp_status_string(bp_status_idx),
-			bp_power_state_string(bp_power_idx));
+	pr_info("%s: modem status: %s -> %s [power %s]", mdmctrl,
+		bp_status_string(bp_status_prev_idx),
+		bp_status_string(bp_status_idx),
+		bp_power_state_string(bp_power_idx));
 
-	if (1 == bp_power_idx)
-		mdm6600_ctrl_bp_is_shutdown = false;
-	else
-		mdm6600_ctrl_bp_is_shutdown = true;
 	kobject_uevent(&radio_cdev.dev->kobj, KOBJ_CHANGE);
 }
 
 static void mdm_ctrl_powerup(void)
 {
-	unsigned int bp_status, i;
+	unsigned int bp_status;
 
 	pr_info("%s: Starting up modem.", mdmctrl);
 
@@ -365,19 +340,8 @@ static void mdm_ctrl_powerup(void)
 	msleep(100);
 	set_bp_pwron(0);
 
-	/* verify power up by sampling reset */
-	for (i = 0; i < 10; i++) {
-		bp_status = get_bp_power_status();
-		pr_debug("%s: reset value = %d\n", __func__, bp_status);
-		if (bp_status) {
-			pr_info("%s: powered Up mdm6600\n", __func__);
-			break;
-		}
-		msleep(400);
-	}
 	 mutex_unlock(&mdm_power_lock);
 
-	
 	/* now let user handles bp status change through uevent */
 }
 
@@ -580,47 +544,49 @@ static unsigned int __devexit bp_shutdown_wait(unsigned int delay_sec)
 
 static void __devexit mdm_ctrl_shutdown(struct platform_device *pdev)
 {
-	unsigned int pd_failure;
-	unsigned int bp_status;
-  
-    mutex_lock(&mdm_power_lock);
-	if (get_bp_power_status() == 0) {
-		pr_err("%s: modem already powered down.\n", mdmctrl);
-		mutex_unlock(&mdm_power_lock);
-		return;
-	}
-	pr_info("%s: Shutting down modem.", mdmctrl);
+        unsigned int pd_failure;
+        unsigned int bp_status;
 
-	bp_status = get_bp_status();
-	pr_info("%s: Shutting down initial status %s [0x%x]\n",
-		mdmctrl, bp_status_string(bp_status), bp_status);
+        pr_info("%s: Shutting down modem.", mdmctrl);
 
-	set_ap_status(AP_STATUS_BP_SHUTDOWN_REQ);
+        bp_status = get_bp_status();
+        pr_info("%s: Initial Modem status %s [0x%x]",
+                mdmctrl, bp_status_string(bp_status), bp_status);
 
-	/* Allow modem to process status */
-	msleep(100);
-	pr_debug("%s: ap_status set to %d\n", mdmctrl, get_ap_status());
+        /* Do an initial check of BP power before attempting shutdown */
+        pd_failure = get_bp_power_status();
+        if (!pd_failure) {
+                pr_err("%s: Modem powered off before shutdown.", mdmctrl);
+                /* Force uevent update */
+                /* If we hit this case, there is a status     */
+                /* misalignment between user space and kernel */
+                update_bp_status();
+        } else {
+                set_ap_status(AP_STATUS_BP_SHUTDOWN_REQ);
 
-	/* Assert PWRON to tell modem to shutdown and leave pin asserted */
-	/* until acknowledged or wait times out */
-	set_bp_pwron(1);
-	msleep(100);
+                /* Allow modem to process status */
+                msleep(100);
+                pr_info("%s: ap_status set to %d", mdmctrl, get_ap_status());
 
-	/* This should be enough to power down the modem */
-	/* if this doesn't work, reset the modem and try */
-	/* one more time, ultimately the modem will be   */
-	/* hard powered off */
-	pd_failure = bp_shutdown_wait(5);
-	//set_bp_pwron(0);
-	if (pd_failure) {
-		pr_err("%s: Resetting unresponsive modem.\n", mdmctrl);
-		set_bp_resin(1);
-		pd_failure = bp_shutdown_wait(7);
-	}
+                /* Assert PWRON to trigger modem to shutdown */
+                /* until acknowledged or wait times out */
+                set_bp_pwron(1);
+                msleep(100);
 
-	if (pd_failure)
-		pr_err("%s: Modem failed to power down.\n", mdmctrl);
-	mutex_unlock(&mdm_power_lock);
+                /* This should be enough to power down the modem */
+                /* if this doesn't work, reset the modem and try */
+                /* one more time, ultimately the modem will be   */
+                /* hard powered off */
+                pd_failure = bp_shutdown_wait(5);
+                if (pd_failure) {
+                        pr_info("%s: Resetting unresponsive modem.", mdmctrl);
+                        set_bp_resin(1);
+                        pd_failure = bp_shutdown_wait(5);
+                }
+        }
+
+        if (pd_failure)
+                pr_err("%s: Modem failed to power down.", mdmctrl);
 }
 
 static int mdm_process_reboot(struct notifier_block *this,
@@ -652,7 +618,7 @@ static struct platform_driver mdm6x00_ctrl_driver = {
 static int __init mdm6600_ctrl_init(void)
 {
 	//TODO: unknown crashing
-	return -1;
+	//return -1;
 	pr_debug("%s: initializing %s\n",
 		__func__, mdm6x00_ctrl_driver.driver.name);
 	return platform_driver_register(&mdm6x00_ctrl_driver);

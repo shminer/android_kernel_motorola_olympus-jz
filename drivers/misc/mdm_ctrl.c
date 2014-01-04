@@ -1011,10 +1011,10 @@ static void ioctl_set_usb_state(int status, struct clientinfo *cinfo)
 
 /* Performs the appropriate action for the specified IOCTL command,
  * returning a failure code only if the IOCTL command was not recognized */
-static long mdm_ctrl_ioctl(struct file *filp, unsigned int cmd,
+static int mdm_ctrl_ioctl(struct file *filp, unsigned int cmd,
 			   unsigned long data)
 {
-	long ret = -EINVAL;
+	int ret = -EINVAL;
 	int *dataParam = (int *)data;
 	int value = -1;
 	int intParam = -1;
