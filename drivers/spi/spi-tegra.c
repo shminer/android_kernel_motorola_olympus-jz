@@ -167,7 +167,7 @@ static const unsigned long spi_tegra_req_sels[] = {
 	RX_FIFO_FULL_COUNT_ZERO << 16)
 
 #define MAX_CHIP_SELECT		4
-#define SLINK_FIFO_DEPTH	32
+#define SLINK_FIFO_DEPTH	4
 
 struct spi_tegra_data {
 	struct spi_master	*master;
@@ -219,6 +219,7 @@ struct spi_tegra_data {
 #ifdef CONFIG_MACH_OLYMPUS
 	unsigned		active_chip_selects;
 #endif
+    bool			disable_runtime_pm;
 	bool			is_hw_based_cs;
 
 	struct completion	rx_dma_complete;
@@ -304,6 +305,35 @@ static int tegra_spi_clk_enable(struct spi_tegra_data *tspi)
 	return 0;
 }
 
+static inline void print_registers(struct spi_tegra_data *tspi)
+{
+	unsigned addr = 0;
+	unsigned long data[0x20/4];
+	char line[256] = {0};
+	while (addr < 0x20) {
+		data[addr/4] = spi_tegra_readl(tspi, addr);
+		sprintf(line, "%s0x%08X ", line, (unsigned int)data[addr/4]);
+		addr += 4;
+	}
+	pr_err("[%s] %s\n", __func__, line);
+}
+
+static int spi_tegra_clock_control(struct spi_device *spi, int c_enable)
+{
+	struct spi_tegra_data *tspi = spi_master_get_devdata(spi->master);
+
+	if (c_enable == 1) {
+		pm_runtime_get_sync(&tspi->pdev->dev);
+		tegra_spi_clk_enable(tspi);
+		return 0;
+	} else if (c_enable == 0) {
+		tegra_spi_clk_disable(tspi);
+		pm_runtime_put_sync(&tspi->pdev->dev);
+		return 0;
+	} else {
+		return -EINVAL;
+	}
+}
 static void cancel_dma(struct tegra_dma_channel *dma_chan,
 	struct tegra_dma_req *req)
 {
@@ -784,9 +814,15 @@ static void spi_tegra_start_transfer(struct spi_device *spi,
 
 	command2 = tspi->def_command2_reg;
 	if (is_first_of_msg) {
-		pm_runtime_get_sync(&tspi->pdev->dev);
-		tegra_spi_clk_enable(tspi);
-
+	if(!tspi->disable_runtime_pm)
+	    {
+		if ((ret = pm_runtime_get_sync(&tspi->pdev->dev)) < 0) {
+			dev_err(&tspi->pdev->dev,
+				"%s: spi_pm_runtime_get_sync() returns %d\n",
+				__func__, ret);
+			return;
+		}
+	    }
 		spi_tegra_clear_status(tspi);
 
 		command = tspi->def_command_reg;
@@ -1372,6 +1408,7 @@ static int __init spi_tegra_probe(struct platform_device *pdev)
 	master->setup = spi_tegra_setup;
 	master->transfer = spi_tegra_transfer;
 	master->num_chipselect = MAX_CHIP_SELECT;
+    master->clock_control = spi_tegra_clock_control;
 
 	dev_set_drvdata(&pdev->dev, master);
 	tspi = spi_master_get_devdata(master);
@@ -1439,6 +1476,7 @@ static int __init spi_tegra_probe(struct platform_device *pdev)
 		tspi->parent_clk_count = pdata->parent_clk_count;
 		tspi->parent_clk_list = pdata->parent_clk_list;
 		tspi->max_rate = pdata->max_rate;
+        tspi->disable_runtime_pm = pdata->disable_runtime_pm;
 	} else {
 		tspi->is_clkon_always = false;
 		tspi->is_dma_allowed = true;
@@ -1446,6 +1484,7 @@ static int __init spi_tegra_probe(struct platform_device *pdev)
 		tspi->parent_clk_count = 0;
 		tspi->parent_clk_list = NULL;
 		tspi->max_rate = 0;
+        tspi->disable_runtime_pm = false;
 	}
 
 	tspi->max_parent_rate = 0;
@@ -1492,6 +1531,12 @@ skip_dma_alloc:
 	if (tspi->is_clkon_always)
 		tegra_spi_clk_enable(tspi);
 
+  master->dev.of_node = pdev->dev.of_node;
+	ret = spi_register_master(master);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "can not register to master err %d\n", ret);
+		goto exit_destry_wq;
+	}
 	/* create the workqueue for the spi transfer */
 	snprintf(spi_wq_name, sizeof(spi_wq_name), "spi_tegra-%d", pdev->id);
 	tspi->spi_workqueue = create_singlethread_workqueue(spi_wq_name);
@@ -1503,12 +1548,7 @@ skip_dma_alloc:
 
 	INIT_WORK(&tspi->spi_transfer_work, tegra_spi_transfer_work);
 
-	master->dev.of_node = pdev->dev.of_node;
-	ret = spi_register_master(master);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "can not register to master err %d\n", ret);
-		goto exit_destry_wq;
-	}
+
 
 	return ret;
 
