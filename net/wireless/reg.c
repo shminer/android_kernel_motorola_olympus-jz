@@ -1350,7 +1350,7 @@ static void reg_set_request_processed(void)
 	spin_unlock(&reg_requests_lock);
 
 	if (last_request->initiator == NL80211_REGDOM_SET_BY_USER)
-		cancel_delayed_work_sync(&reg_timeout);
+		cancel_delayed_work(&reg_timeout);
 
 	if (need_more_processing)
 		schedule_work(&reg_work);
@@ -2274,7 +2274,8 @@ void /* __init_or_exit */ regulatory_exit(void)
 	mutex_lock(&reg_mutex);
 
 	reset_regdomains(true);
-
+	kfree(last_request);
+	last_request = NULL;
 	dev_set_uevent_suppress(&reg_pdev->dev, true);
 
 	platform_device_unregister(reg_pdev);
