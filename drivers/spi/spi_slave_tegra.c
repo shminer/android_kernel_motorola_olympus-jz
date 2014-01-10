@@ -919,7 +919,7 @@ static void spi_tegra_curr_transfer_complete(struct spi_tegra_data *tspi,
 	list_del(&m->queue);
 	del_timer_sync(&tspi->transfer_timer);
 	if (err)
-	printk(KERN_ALERT"spi:tegra:address m=%x m->complete=%x\n",m,m->complete);
+	printk(KERN_ALERT"spi:tegra:address m=%x m->complete=%x\n",(unsigned int)(m),(unsigned int)(m->complete));
 	else
 	m->complete(m->context);
 	if (tspi->client_slave_done_cb)

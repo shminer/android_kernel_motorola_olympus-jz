@@ -19,21 +19,21 @@
  * sysfs.
  */
 
-int sfs_hR2S = 1;
+int sfs_hR2S = 2;
 EXPORT_SYMBOL(sfs_hR2S);
 int sfs_vR2S = 1;
 EXPORT_SYMBOL(sfs_vR2S);
-int sfs_hSW = 32;
+int sfs_hSW = 2;
 EXPORT_SYMBOL(sfs_hSW);
 int sfs_vSW = 1;
 EXPORT_SYMBOL(sfs_vSW);
-int sfs_hBP = 32;
+int sfs_hBP = 28;
 EXPORT_SYMBOL(sfs_hBP);
-int sfs_vBP = 1;
+int sfs_vBP = 2;
 EXPORT_SYMBOL(sfs_vBP);
-int sfs_hFP = 32;
+int sfs_hFP = 28;
 EXPORT_SYMBOL(sfs_hFP);
-int sfs_vFP = 1;
+int sfs_vFP = 2;
 EXPORT_SYMBOL(sfs_vFP);
 /* refresh rate set by jz */
 int sfs_refresh = 60;

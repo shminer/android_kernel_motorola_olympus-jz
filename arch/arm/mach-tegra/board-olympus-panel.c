@@ -133,7 +133,7 @@ static struct resource olympus_disp2_resources[] = {
 static struct tegra_dc_mode olympus_panel_modes[] = {
 	{
 		.pclk = 27000000,
-		.h_ref_to_sync = 1,//2
+		.h_ref_to_sync = 2,//2
 		.v_ref_to_sync = 1,//1
 		.h_sync_width = 2,//4
 		.v_sync_width = 1,//2
