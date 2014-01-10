@@ -90,9 +90,9 @@ static void send_key_event(struct cpcap_3mm5_data *data, unsigned int state)
 	if (data->key_state != state) {
 		data->key_state = state;
 		cpcap_broadcast_key_event(data->cpcap, KEY_MEDIA, state);
-	} else if (data->key_state == 0) {
+	/*} else if (data->key_state == 0) {
 		cpcap_broadcast_key_event(data->cpcap, KEY_MEDIA, 1);
-		cpcap_broadcast_key_event(data->cpcap, KEY_MEDIA, 0);
+		cpcap_broadcast_key_event(data->cpcap, KEY_MEDIA, 0);*/
 	}
 }
 
