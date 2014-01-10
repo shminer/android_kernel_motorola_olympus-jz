@@ -19,18 +19,15 @@
 #include <linux/device.h>
 #include <linux/gpio.h>
 #include <linux/platform_device.h>
+#include <linux/reboot.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/cdev.h>
 #include <linux/fs.h>
 #include <linux/init.h>
-#include <linux/reboot.h>
 #include <linux/kobject.h>
 #include <linux/radio_ctrl/mdm6600_ctrl.h>
 #include <linux/radio_ctrl/radio_class.h>
-
-#define BOOTMODE_NORMAL 0x00
-#define BOOTMODE_FLASH 0x01
 
 #define AP_STATUS_BP_PANIC_ACK      0x00
 #define AP_STATUS_DATA_ONLY_BYPASS  0x01
@@ -52,8 +49,6 @@
 #define LOOP_DELAY_TIME_MS          100
 
 static const char *mdmctrl = "mdm6600_ctrl";
-
-bool mdm6600_ctrl_bp_is_shutdown;
 
 static const char *bp_status[8] = {
 	[BP_STATUS_PANIC] = "panic",
@@ -88,7 +83,6 @@ struct mdm_ctrl_info {
 static struct mdm_ctrl_info mdm_ctrl;
 
 static DEFINE_MUTEX(mdm_ctrl_info_lock);
-static DEFINE_MUTEX(mdm_power_lock);
 
 struct workqueue_struct *working_queue = NULL;
 
@@ -147,23 +141,23 @@ static ssize_t mdm_power_show(struct radio_dev *rdev, char *buff)
 static ssize_t mdm_user_command(struct radio_dev *rdev, char *post_strip)
 {
 
-        pr_info("%s: user command = %s\n", mdmctrl, post_strip);
+	pr_info("%s: user command = %s\n", mdmctrl, post_strip);
 
-        if (strcmp(post_strip,"shutdown") == 0) {
-                mdm_ctrl_shutdown(NULL);
-        } else if (strcmp(post_strip,"powerup") == 0) {
-                mdm_ctrl_powerup();
-        } else if (strcmp(post_strip,"bootmode_normal") == 0) {
-                mdm_ctrl_set_bootmode(0);
-        } else if (strcmp(post_strip,"bootmode_flash") == 0) {
-                mdm_ctrl_set_bootmode(1);
-        } else if (strcmp(post_strip,"dump_log") == 0) {
-                mdm_ctrl_dump_log();
-        } else {
-                return -EINVAL;
-        }
+	if (strcmp(post_strip,"shutdown") == 0) {
+		mdm_ctrl_shutdown(NULL);
+	} else if (strcmp(post_strip,"powerup") == 0) {
+		mdm_ctrl_powerup();
+	} else if (strcmp(post_strip,"bootmode_normal") == 0) {
+		mdm_ctrl_set_bootmode(0);
+	} else if (strcmp(post_strip,"bootmode_flash") == 0) {
+		mdm_ctrl_set_bootmode(1);
+	} else if (strcmp(post_strip,"dump_log") == 0) {
+		mdm_ctrl_dump_log();
+	} else {
+		return -EINVAL;
+	}
 
-        return 0;
+	return 0;
 }
 
 static unsigned int mdm_gpio_get_value(struct mdm_ctrl_gpio gpio)
@@ -194,8 +188,7 @@ static int mdm_gpio_setup(struct mdm_ctrl_gpio *gpio)
 	gpio_export(gpio->number, false);
 	if (gpio->direction == MDM_GPIO_DIRECTION_IN)
 		gpio_direction_input(gpio->number);
-	else if (gpio->direction == MDM_GPIO_DIRECTION_OUT &&
-		 gpio->default_value <= 1)
+	else if (gpio->direction == MDM_GPIO_DIRECTION_OUT)
 		gpio_direction_output(gpio->number, gpio->default_value);
 	return 0;
 }
@@ -322,14 +315,10 @@ static void mdm_ctrl_powerup(void)
 
 	pr_info("%s: Starting up modem.", mdmctrl);
 
-	mutex_lock(&mdm_power_lock);
-
 	bp_status = get_bp_status();
-	pr_debug("%s: starting modem initial status %s [0x%x] bm %d\n",
-                mdmctrl, bp_status_string(bp_status), bp_status,
-                mdm_ctrl.pdata->bootmode);
-                
-	mdm_ctrl_set_bootmode(mdm_ctrl.pdata->bootmode);
+	pr_info("%s: Initial Modem status %s [0x%x]",
+		mdmctrl, bp_status_string(bp_status), bp_status);
+
 	set_ap_status(AP_STATUS_NO_BYPASS);
 	pr_info("%s: ap_status set to %d", mdmctrl, get_ap_status());
 	msleep(100);
@@ -339,8 +328,6 @@ static void mdm_ctrl_powerup(void)
 	set_bp_pwron(1);
 	msleep(100);
 	set_bp_pwron(0);
-
-	 mutex_unlock(&mdm_power_lock);
 
 	/* now let user handles bp status change through uevent */
 }
@@ -367,7 +354,6 @@ static void irq_worker(struct work_struct *work)
 	struct gpio_info *gpio = container_of(work, struct gpio_info, work);
 	update_bp_status();
 	enable_irq(gpio->irq);
- 
 }
 
 static irqreturn_t irq_handler(int irq, void *data)
@@ -400,11 +386,8 @@ static int mdm_gpio_setup_internal(struct mdm_ctrl_platform_data *pdata)
 					 IRQ_TYPE_EDGE_FALLING | IRQ_TYPE_EDGE_RISING,
 					 pdata->gpios[i].name, gpio_data);
                         if (rv < 0) {
-				pr_err(
-				"%s: Cannot request IRQ (%d) from kernel!\n",
-				mdmctrl, gpio_data->irq);
-			} else {
-				enable_irq_wake(gpio_data->irq);
+				pr_err("%s: Cannot request IRQ (%d) from kernel!",
+				       mdmctrl, gpio_data->irq);
 			}
 		}
         }
@@ -436,14 +419,14 @@ static struct radio_dev radio_cdev = {
 	.name = "mdm6600",
 	.power_status = mdm_power_show,
 	.status = mdm_status_show,
-    .command = mdm_user_command,
+        .command = mdm_user_command,
 };
 
 static int __devinit mdm_ctrl_probe(struct platform_device *pdev)
 {
 	int i;
 	struct mdm_ctrl_platform_data *pdata = pdev->dev.platform_data;
-  
+
 	dev_info(&pdev->dev, "mdm_ctrl_probe");
 
 	pr_debug("%s: radio_cdev = %p\n", __func__, &radio_cdev);
@@ -459,7 +442,7 @@ static int __devinit mdm_ctrl_probe(struct platform_device *pdev)
 	working_queue = create_singlethread_workqueue("mdm_ctrl_wq");
 	if (!working_queue) {
 		dev_err(&pdev->dev, "Cannot create work queue.");
-		goto probe_cleanup;
+		goto probe_err;
 	}
 
 	if (mdm_gpio_setup_internal(pdata) < 0) {
@@ -472,8 +455,6 @@ static int __devinit mdm_ctrl_probe(struct platform_device *pdev)
 		goto err_setup;
 	}
 
-	mdm_ctrl_set_bootmode(0);
-    mdm_ctrl_powerup();
 	update_bp_status();
 	register_reboot_notifier(&mdm6600_reboot_notifier);
 
@@ -481,8 +462,10 @@ static int __devinit mdm_ctrl_probe(struct platform_device *pdev)
 
 err_setup:
 	mdm_gpio_cleanup_internal();
+
+probe_err:
 	destroy_workqueue(working_queue);
-	
+
 probe_cleanup:
 	for (i = 0; i < MDM_CTRL_NUM_GPIOS; i++)
 		mdm_gpio_free(&pdata->gpios[i]);
@@ -544,49 +527,66 @@ static unsigned int __devexit bp_shutdown_wait(unsigned int delay_sec)
 
 static void __devexit mdm_ctrl_shutdown(struct platform_device *pdev)
 {
-        unsigned int pd_failure;
-        unsigned int bp_status;
+	unsigned int pd_failure;
+	unsigned int bp_status;
 
-        pr_info("%s: Shutting down modem.", mdmctrl);
+	pr_info("%s: Shutting down modem.", mdmctrl);
 
-        bp_status = get_bp_status();
-        pr_info("%s: Initial Modem status %s [0x%x]",
-                mdmctrl, bp_status_string(bp_status), bp_status);
+	bp_status = get_bp_status();
+	pr_info("%s: Initial Modem status %s [0x%x]",
+		mdmctrl, bp_status_string(bp_status), bp_status);
 
-        /* Do an initial check of BP power before attempting shutdown */
-        pd_failure = get_bp_power_status();
-        if (!pd_failure) {
-                pr_err("%s: Modem powered off before shutdown.", mdmctrl);
-                /* Force uevent update */
-                /* If we hit this case, there is a status     */
-                /* misalignment between user space and kernel */
-                update_bp_status();
-        } else {
-                set_ap_status(AP_STATUS_BP_SHUTDOWN_REQ);
+	/* Do an initial check of BP power before attempting shutdown */
+	pd_failure = get_bp_power_status();
+	if (!pd_failure) {
+		pr_err("%s: Modem powered off before shutdown.", mdmctrl);
+		/* Force uevent update */
+		/* If we hit this case, there is a status     */
+		/* misalignment between user space and kernel */
+		update_bp_status();
+	} else {
+		set_ap_status(AP_STATUS_BP_SHUTDOWN_REQ);
 
-                /* Allow modem to process status */
-                msleep(100);
-                pr_info("%s: ap_status set to %d", mdmctrl, get_ap_status());
+		/* Allow modem to process status */
+		msleep(100);
+		pr_info("%s: ap_status set to %d", mdmctrl, get_ap_status());
 
-                /* Assert PWRON to trigger modem to shutdown */
-                /* until acknowledged or wait times out */
-                set_bp_pwron(1);
-                msleep(100);
+		/* Assert PWRON to trigger modem to shutdown */
+		/* until acknowledged or wait times out */
+		set_bp_pwron(1);
+		msleep(100);
 
-                /* This should be enough to power down the modem */
-                /* if this doesn't work, reset the modem and try */
-                /* one more time, ultimately the modem will be   */
-                /* hard powered off */
-                pd_failure = bp_shutdown_wait(5);
-                if (pd_failure) {
-                        pr_info("%s: Resetting unresponsive modem.", mdmctrl);
-                        set_bp_resin(1);
-                        pd_failure = bp_shutdown_wait(5);
-                }
-        }
+		/* This should be enough to power down the modem */
+		/* if this doesn't work, reset the modem and try */
+		/* one more time, ultimately the modem will be   */
+		/* hard powered off */
+		pd_failure = bp_shutdown_wait(5);
+		if (pd_failure) {
+			pr_info("%s: Resetting unresponsive modem.", mdmctrl);
+			set_bp_resin(1);
+			pd_failure = bp_shutdown_wait(5);
+		}
+	}
 
-        if (pd_failure)
-                pr_err("%s: Modem failed to power down.", mdmctrl);
+	if (pd_failure)
+		pr_err("%s: Modem failed to power down.", mdmctrl);
+}
+
+static void mdm_ctrl_dump_log(void)
+{
+	pr_info("%s: Dumping modem log", mdmctrl);
+
+	/* To implement the dump, the BP expects BP_PWRON to be asserted
+	 * while the AP status pins remain normal.
+	 */
+	set_bp_pwron(1);
+	msleep(100);
+	set_bp_pwron(0);
+
+	/* Allow enough time for the log to dump fully to EFS on the BP,
+	 * so that users of this don't have to wait themselves.
+	 */
+	msleep(500);
 }
 
 static int mdm_process_reboot(struct notifier_block *this,
@@ -617,16 +617,13 @@ static struct platform_driver mdm6x00_ctrl_driver = {
 
 static int __init mdm6600_ctrl_init(void)
 {
-	//TODO: unknown crashing
-	//return -1;
-	pr_debug("%s: initializing %s\n",
-		__func__, mdm6x00_ctrl_driver.driver.name);
+	printk(KERN_DEBUG "mdm6600_ctrl_init\n");
 	return platform_driver_register(&mdm6x00_ctrl_driver);
 }
 
 static void __exit mdm6600_ctrl_exit(void)
 {
-	pr_debug("%s: exiting %s\n", __func__, mdm6x00_ctrl_driver.driver.name);
+	printk(KERN_DEBUG "mdm6600_ctrl_exit\n");
 	platform_driver_unregister(&mdm6x00_ctrl_driver);
 }
 

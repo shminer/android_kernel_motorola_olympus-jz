@@ -602,7 +602,6 @@ irqreturn_t xmm_power_ipc_ap_wake_irq(int irq, void *dev_id)
 			} else {
 				CP_initiated_L2toL0 = true;
 				spin_unlock(&xmm_lock);
-				ril_change_modem_crash_mode();
 			}
 		}
 		/* save gpio state */
