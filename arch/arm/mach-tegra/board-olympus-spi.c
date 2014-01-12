@@ -74,8 +74,8 @@ static struct tegra_spi_platform_data olympus_spi_cpcap_pdata = {
 
 struct spi_clk_parent spi_parent_clk[] = {
 	[0] = {.name = "pll_p"},
-	[1] = {.name = "pll_m"},
-	[2] = {.name = "clk_m"},
+	//[1] = {.name = "pll_m"},
+	[1] = {.name = "clk_m"},
 };
 
 void __init olympus_spi_init(void)
