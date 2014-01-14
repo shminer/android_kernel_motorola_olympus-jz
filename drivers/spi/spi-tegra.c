@@ -167,7 +167,7 @@ static const unsigned long spi_tegra_req_sels[] = {
 	RX_FIFO_FULL_COUNT_ZERO << 16)
 
 #define MAX_CHIP_SELECT		4
-#define SLINK_FIFO_DEPTH	4
+#define SLINK_FIFO_DEPTH	32
 
 struct spi_tegra_data {
 	struct spi_master	*master;

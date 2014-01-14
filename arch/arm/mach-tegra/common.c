@@ -321,12 +321,9 @@ void tegra_init_cache(bool init)
 	writel_relaxed(0x331, p + L2X0_TAG_LATENCY_CTRL);
 	writel_relaxed(0x441, p + L2X0_DATA_LATENCY_CTRL);
 	writel(7, p + L2X0_PREFETCH_CTRL);//
-	writel_relaxed(L2X0_DYNAMIC_CLK_GATING_EN, p + L2X0_POWER_CTRL);//
+	writel(2, p + L2X0_POWER_CTRL);
 	
-	aux_ctrl = readl(p + L2X0_CACHE_TYPE);
-    aux_ctrl = (aux_ctrl & 0x700) << (17-8);
-    aux_ctrl |= 0x7C000001;
-    l2x0_init(p, aux_ctrl, 0x8200c3fe);
+    l2x0_init(p, 0x7C080001, 0x8200c3fe);
 
 #elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
 #ifdef CONFIG_TEGRA_SILICON_PLATFORM
