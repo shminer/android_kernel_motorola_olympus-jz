@@ -75,7 +75,7 @@ static ssize_t radio_command(struct device *dev,
 	/* strip whitespaces if any */
 	memcpy(tmp, buff, size);
 	tmp[size] = '\0';
-	post_strip = strim(tmp);
+	post_strip = strstrip(tmp);
 
 	pr_debug("%s: command = %s size = %d\n", __func__, post_strip, size);
 
@@ -85,7 +85,7 @@ static ssize_t radio_command(struct device *dev,
 
 static DEVICE_ATTR(status, S_IRUGO, radio_status_show, NULL);
 static DEVICE_ATTR(power_status, S_IRUGO, radio_power_show, NULL);
-static DEVICE_ATTR(command, S_IWUSR, NULL, radio_command);
+static DEVICE_ATTR(command, (S_IWUSR | S_IWGRP), NULL, radio_command);
 
 int radio_dev_register(struct radio_dev *rdev)
 {
@@ -140,7 +140,7 @@ err_status:
 	device_unregister(rdev->dev);
 	dev_set_drvdata(rdev->dev, NULL);
 
-	 return err;
+	return err;
 }
 EXPORT_SYMBOL(radio_dev_register);
 
