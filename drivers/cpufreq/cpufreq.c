@@ -46,7 +46,7 @@ static DEFINE_MUTEX(dvfs_lock);
 
 
 int cpufrequency[FREQCOUNT] = {1300,1200,1000,912,816,608,456,192};
-int cpuvoltage[FREQCOUNT] = {1250,1120,1000,950,850,800,780,750};
+int cpuvoltage[FREQCOUNT] = {1250,1120,1000,950,900,850,800,750};
 int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0, 0};
 */
 /* user voltage control */
@@ -57,7 +57,7 @@ int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0, 0};
 
 
 int cpufrequency[FREQCOUNT] = {1200,1000,912,816,608,456,192};
-int cpuvoltage[FREQCOUNT] =   {1120,1000,950,850,800,780,750};
+int cpuvoltage[FREQCOUNT] =   {1120,1000,950,900,850,800,750};
 int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0};
 
 /* user voltage control */
@@ -68,7 +68,7 @@ int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0};
 
 
 int cpufrequency[FREQCOUNT] = {1000,912,816,608,456,192};
-int cpuvoltage[FREQCOUNT] = {1000,950,850,800,780,750};
+int cpuvoltage[FREQCOUNT] = {1000,950,900,850,800,750};
 int cpuuvoffset[FREQCOUNT] = {0, 0, 0, 0, 0, 0};
 */
 /**
