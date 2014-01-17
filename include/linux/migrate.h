@@ -6,6 +6,11 @@
 
 typedef struct page *new_page_t(struct page *, unsigned long private, int **);
 
+enum migrate_mode {
+        MIGRATE_ASYNC,
+        MIGRATE_SYNC_LIGHT,
+        MIGRATE_SYNC,
+};
 #ifdef CONFIG_MIGRATION
 #define PAGE_MIGRATION 1
 

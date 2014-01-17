@@ -1,7 +1,5 @@
 /*
      Copyright (C) 2010 Motorola, Inc.
-     Copyright 2013: Olympus Kernel Project
-     <http://forum.xda-developers.com/showthread.php?t=2016837>
 
      This program is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License version 2 as
@@ -57,7 +55,7 @@ struct mdm_command_gpios {
 
 struct mdm_ctrl_platform_data {
 	
-	int  bootmode;
+	
 	struct mdm_ctrl_gpio gpios[MDM_CTRL_NUM_GPIOS];
 	struct mdm_command_gpios cmd_gpios;
 };
