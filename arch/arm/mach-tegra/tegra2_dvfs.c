@@ -42,7 +42,7 @@ static bool tegra_dvfs_cpu_disabled = true;
 static const int core_millivolts[MAX_DVFS_FREQS] =
 //	{950, 1000, 1100, 1200, 1225, 1275, 1300};
 //	{900, 950, 1000, 1050, 1100, 1150, 1200}; //altered
-	{900,1000,1050,1150,1200,1250,1325};
+	{900,1050,1150,1230,1250,1300,1325};
 static const int cpu_millivolts[MAX_DVFS_FREQS] =
 //	 200, 456, 608, 816, 912, 1000,1200mhz
 	{750, 800, 850, 900, 950, 1000,1130};

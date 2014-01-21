@@ -440,4 +440,3 @@ console_initcall(ram_console_early_init);
 postcore_initcall(ram_console_module_init);
 #endif
 late_initcall(ram_console_late_init);
-
