@@ -807,7 +807,7 @@ int cfg80211_change_iface(struct cfg80211_registered_device *rdev,
 	     ntype == NL80211_IFTYPE_P2P_CLIENT))
 		return -EBUSY;
 
-	if (ntype != otype) {
+	if (ntype != otype && netif_running(dev)) {
 		err = cfg80211_can_change_interface(rdev, dev->ieee80211_ptr,
 						    ntype);
 		if (err)
@@ -971,15 +971,18 @@ int cfg80211_can_change_interface(struct cfg80211_registered_device *rdev,
 
 		num[wdev_iter->iftype]++;
 		total++;
-		used_iftypes |= BIT(wdev_iter->iftype);		
+		used_iftypes |= BIT(wdev_iter->iftype);
 	}
 	mutex_unlock(&rdev->devlist_mtx);
-    if (total == 1)
-    return 0;
+
+	if (total == 1)
+		return 0;
+
 	for (i = 0; i < rdev->wiphy.n_iface_combinations; i++) {
 		const struct ieee80211_iface_combination *c;
 		struct ieee80211_iface_limit *limits;
 		u32 all_iftypes = 0;
+
 		c = &rdev->wiphy.iface_combinations[i];
 
 		limits = kmemdup(c->limits, sizeof(limits[0]) * c->n_limits,
@@ -1001,6 +1004,7 @@ int cfg80211_can_change_interface(struct cfg80211_registered_device *rdev,
 				limits[j].max -= num[iftype];
 			}
 		}
+
 		/*
 		 * Finally check that all iftypes that we're currently
 		 * using are actually part of this combination. If they
@@ -1021,42 +1025,4 @@ int cfg80211_can_change_interface(struct cfg80211_registered_device *rdev,
 	}
 
 	return -EBUSY;
-}
-
-int ieee80211_get_ratemask(struct ieee80211_supported_band *sband,
-			   const u8 *rates, unsigned int n_rates,
-			   u32 *mask)
-{
-	int i, j;
-
-	if (!sband)
-		return -EINVAL;
-
-	if (n_rates == 0 || n_rates > NL80211_MAX_SUPP_RATES)
-		return -EINVAL;
-
-	*mask = 0;
-
-	for (i = 0; i < n_rates; i++) {
-		int rate = (rates[i] & 0x7f) * 5;
-		bool found = false;
-
-		for (j = 0; j < sband->n_bitrates; j++) {
-			if (sband->bitrates[j].bitrate == rate) {
-				found = true;
-				*mask |= BIT(j);
-				break;
-			}
-		}
-		if (!found)
-			return -EINVAL;
-	}
-
-	/*
-	 * mask must have at least one bit set here since we
-	 * didn't accept a 0-length rates array nor allowed
-	 * entries in the array that didn't exist
-	 */
-
-	return 0;
 }
