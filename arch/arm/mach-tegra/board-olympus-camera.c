@@ -25,6 +25,7 @@
 #include <media/ov5650.h>
 #include <media/dw9714l.h>
 #include <media/soc380.h>
+#include <media/tegra_camera.h>
 #include <linux/regulator/consumer.h>
 #include <linux/err.h>
 #include <asm/mach-types.h>
@@ -319,17 +320,16 @@ struct dw9714l_platform_data focuser_dw9714l_pdata = {
 };
 
 static struct lm3554_platform_data flash_lm3554_data = {
-	.flags	= 0x40,
-	.torch_brightness_def = 0x50,
-	.flash_brightness_def = 0x28,
-	.flash_duration_def = 0x4f,
-	.config_reg_1_def = 0x40,
+	.flags	= 0x1,
+	.torch_brightness_def = 0xa0,
+	.flash_brightness_def = 0x78,
+	.flash_duration_def = 0x28,
+	.config_reg_1_def = 0xe0,
 	.config_reg_2_def = 0xf0,
-	.vin_monitor_def = 0xf2,
-	.gpio_reg_def = 0x80,
+	.vin_monitor_def = 0x01,
+	.gpio_reg_def = 0x0,
 /*
 	.power_id = POWER_ID_FLASH,
-	* 
 	.power_on = olympus_rear_cam_power_on,
 	.power_off = olympus_rear_cam_power_off,
 */
@@ -372,8 +372,15 @@ static void olympus_camera_set(void)
 		rear_cam.flash_on	= 1;
 }
 
+static struct tegra_camera_platform_data tegra_camera_pdata = {
+	.limit_3d_emc_clk = true,
+};
+
 static struct platform_device tegra_camera = {
 	.name = "tegra_camera",
+	.dev = {
+		.platform_data = &tegra_camera_pdata,
+	},
 	.id = -1,
 };
 
@@ -386,4 +393,3 @@ void __init olympus_camera_init(void)
 		i2c_register_board_info(2, devices, ndevices);
 
 }
-

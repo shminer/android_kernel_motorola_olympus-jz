@@ -66,6 +66,10 @@ module_param(warn_prevent_lp0, bool, S_IRUGO | S_IWUSR);
 
 bool tegra_pm_irq_lp0_allowed(void)
 {
+/* To support proximity sensor on call
+ * we have to add proximity wakeup to wakepad
+ * and disable lp0 when it's working so it doesn't hang the phone.
+ */
 	return (tegra_prevent_lp0 == 0);
 }
 
@@ -167,7 +171,12 @@ int tegra_pm_irq_set_wake(int irq, int enable)
 	} else if (err < 0) {
 		return -EINVAL;
 	}
-
+#ifdef CONFIG_MACH_OLYMPUS
+	if (irq==225) {
+		printk("%s: Not enabling wake (irq=%d)\n", __func__, irq);
+		return 0;
+	}
+#endif
 	if (enable) {
 		tegra_lp0_wake_enb |= (wake_msk.wake_mask_hi |
 			wake_msk.wake_mask_lo | wake_msk.wake_mask_any);
@@ -290,10 +299,15 @@ static int tegra_pm_irq_syscore_suspend(void)
 		wake_enb = 0xffffffff;
 	}
 
-	/* Clear PMC Wake Status register while going to suspend */
+	/* Clear PMC Wake Status registers while going to suspend */
 	temp = readl(pmc + PMC_WAKE_STATUS);
 	if (temp)
 		pmc_32kwritel(temp, PMC_WAKE_STATUS);
+#ifndef CONFIG_ARCH_TEGRA_2x_SOC
+       temp = readl(pmc + PMC_WAKE2_STATUS);
+       if (temp)
+               pmc_32kwritel(temp, PMC_WAKE2_STATUS);
+#endif
 
 	write_pmc_wake_level(wake_level);
 

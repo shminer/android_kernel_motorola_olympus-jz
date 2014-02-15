@@ -288,7 +288,7 @@ static void __init olympus_akm8975_init(void)
 {
 	tegra_gpio_enable(TEGRA_AKM8975_RESET_GPIO);
 	gpio_request(TEGRA_AKM8975_RESET_GPIO, "akm8975 reset");
-	gpio_direction_output(TEGRA_AKM8975_RESET_GPIO, 1);
+	gpio_direction_output(TEGRA_AKM8975_RESET_GPIO, 1); //to find
 }
 
 static struct regulator *akm8975_regulator;
@@ -395,6 +395,7 @@ struct isl29030_platform_data olympus_isl29030_pdata = {
 	.num_samples_for_noise_floor = 0x05,
 	.lens_percent_t = 10,
 	.irq = TEGRA_PROX_INT_GPIO,
+
 };
 
 static struct platform_device isl29030_als_ir = {
@@ -429,7 +430,7 @@ static struct platform_device *olympus_sensors[] __initdata = {
 	&isl29030_als_ir,
 	&kxtf9_platform_device,
 	&akm8975_platform_device,
-	&ap20_hall_effect_dock,
+//	&ap20_hall_effect_dock,
 	&tegra_vib_gpio,
 	&tegra_tmon,
 };
@@ -512,4 +513,3 @@ void __init olympus_sensors_init(void)
 					ARRAY_SIZE(aes1750_spi_device));
 #endif
 }
-
