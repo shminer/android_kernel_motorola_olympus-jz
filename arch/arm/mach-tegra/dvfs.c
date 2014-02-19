@@ -39,7 +39,7 @@
 #include "clock.h"
 #include "dvfs.h"
 
-#define FREQCOUNT 7
+#define FREQCOUNT 6
 extern int cpufrequency[FREQCOUNT];
 extern int cpuuvoffset[FREQCOUNT];
 
