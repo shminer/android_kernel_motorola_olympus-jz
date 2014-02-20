@@ -154,8 +154,8 @@
 #define AP25_EMC_INTERMEDIATE_RATE	760000000
 #define AP25_EMC_SCALING_STEP		650000000
 
-#define MAX_CPU 1000000000
-#define MAX_GPU 401000000
+#define MAX_CPU 1200000000
+#define MAX_GPU 601000000
 #define MAX_AVP 400000000
 
 static void __iomem *reg_clk_base = IO_ADDRESS(TEGRA_CLK_RESET_BASE);
@@ -2752,7 +2752,7 @@ unsigned long tegra_emc_to_cpu_ratio(unsigned long cpu_rate)
 	else if (cpu_rate >= 816000)
 		return 800000000;	/* cpu 816 MHz, emc max */
 	else if (cpu_rate >= 608000)
-		return 600000000;	/* cpu 608 MHz, emc 150Mhz */
+		return 660000000;	/* cpu 608 MHz, emc 150Mhz */
 	else if (cpu_rate >= 456000)
 		return 300000000;	/* cpu 456 MHz, emc 75Mhz */
 	else if (cpu_rate >= 312000)

@@ -50,7 +50,7 @@ int cpuvoltage[FREQCOUNT] = {1250,1120,1000,950,900,850,800,750};
 int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0, 0};
 */
 /* user voltage control */
-/*
+
 #define FREQCOUNT 7
 #define CPUMVMAX 1280
 #define CPUMVMIN 450
@@ -59,9 +59,9 @@ int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0, 0};
 int cpufrequency[FREQCOUNT] = {1200,1000,912,816,608,456,192};
 int cpuvoltage[FREQCOUNT] =   {1120,1000,950,900,850,800,750};
 int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0};
-*/
-/* user voltage control */
 
+/* user voltage control */
+/*
 #define FREQCOUNT 6
 #define CPUMVMAX 1280
 #define CPUMVMIN 450
@@ -70,7 +70,7 @@ int cpuuvoffset[FREQCOUNT] = { 0, 0, 0, 0, 0, 0, 0};
 int cpufrequency[FREQCOUNT] = {1000,912,816,608,456,192};
 int cpuvoltage[FREQCOUNT] = {1000,950,900,850,800,750};
 int cpuuvoffset[FREQCOUNT] = {0, 0, 0, 0, 0, 0};
-
+*/
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
  * level driver of CPUFreq support, and its spinlock. This lock
