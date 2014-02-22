@@ -154,9 +154,9 @@
 #define AP25_EMC_INTERMEDIATE_RATE	760000000
 #define AP25_EMC_SCALING_STEP		650000000
 
-#define MAX_CPU 1200000000
-#define MAX_GPU 601000000
-#define MAX_AVP 400000000
+#define MAX_CPU 1000000000
+#define MAX_GPU 401000000
+#define MAX_AVP 300000000
 
 static void __iomem *reg_clk_base = IO_ADDRESS(TEGRA_CLK_RESET_BASE);
 static void __iomem *reg_pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
