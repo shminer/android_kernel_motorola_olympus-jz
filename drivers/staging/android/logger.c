@@ -405,6 +405,10 @@ static ssize_t do_write_log_from_user(struct logger_log *log,
 		if (copy_from_user(log->buffer, buf + len, count - len))
 			return -EFAULT;
 
+#ifdef CONFIG_ANDROID_LOGGER_TO_KMSG
+	pr_info("[log] %.*s%.*s\n", len, log->buffer + log->w_off, count - len, log->buffer );
+#endif
+
 	log->w_off = logger_offset(log->w_off + count);
 
 	return count;
@@ -532,12 +536,7 @@ static int logger_release(struct inode *ignored, struct file *file)
 {
 	if (file->f_mode & FMODE_READ) {
 		struct logger_reader *reader = file->private_data;
-		struct logger_log *log = reader->log;
-
-		mutex_lock(&log->mutex);
 		list_del(&reader->list);
-		mutex_unlock(&log->mutex);
-
 		kfree(reader);
 	}
 

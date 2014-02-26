@@ -152,11 +152,11 @@
 
 #define AP25_EMC_BRIDGE_RATE		380000000
 #define AP25_EMC_INTERMEDIATE_RATE	760000000
-#define AP25_EMC_SCALING_STEP		650000000
+#define AP25_EMC_SCALING_STEP		600000000
 
-#define MAX_CPU 1000000000
-#define MAX_GPU 401000000
-#define MAX_AVP 300000000
+#define MAX_CPU 1200000000
+#define MAX_GPU 601000000
+#define MAX_AVP 400000000
 
 static void __iomem *reg_clk_base = IO_ADDRESS(TEGRA_CLK_RESET_BASE);
 static void __iomem *reg_pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
@@ -2748,13 +2748,13 @@ unsigned long tegra_emc_to_cpu_ratio(unsigned long cpu_rate)
 {
 	/* Vote on memory bus frequency based on cpu frequency */
 	if (cpu_rate > 1000000000)
-		return 800000000;
+		return 760000000;
 	else if (cpu_rate >= 816000)
-		return 800000000;	/* cpu 816 MHz, emc max */
+		return 600000000;	/* cpu 816 MHz, emc max */
 	else if (cpu_rate >= 608000)
-		return 660000000;	/* cpu 608 MHz, emc 150Mhz */
+		return 300000000;	/* cpu 608 MHz, emc 150Mhz */
 	else if (cpu_rate >= 456000)
-		return 300000000;	/* cpu 456 MHz, emc 75Mhz */
+		return 150000000;	/* cpu 456 MHz, emc 75Mhz */
 	else if (cpu_rate >= 312000)
 		return 100000000;	/* cpu 312 MHz, emc 50Mhz */
 	else

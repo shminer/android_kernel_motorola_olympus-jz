@@ -702,11 +702,9 @@ static int freq_reg_info_regd(struct wiphy *wiphy,
 	for (i = 0; i < regd->n_reg_rules; i++) {
 		const struct ieee80211_reg_rule *rr;
 		const struct ieee80211_freq_range *fr = NULL;
-		const struct ieee80211_power_rule *pr = NULL;
 
 		rr = &regd->reg_rules[i];
 		fr = &rr->freq_range;
-		pr = &rr->power_rule;
 
 		/*
 		 * We only need to know if one frequency rule was
@@ -884,6 +882,7 @@ static void handle_channel(struct wiphy *wiphy,
 		return;
 	}
 
+	chan->beacon_found = false;
 	chan->flags = flags | bw_flags | map_regdom_flags(reg_rule->flags);
 	chan->max_antenna_gain = min(chan->orig_mag,
 		(int) MBI_TO_DBI(power_rule->max_antenna_gain));
@@ -935,7 +934,7 @@ static bool ignore_reg_update(struct wiphy *wiphy,
 	    initiator != NL80211_REGDOM_SET_BY_COUNTRY_IE &&
 	    !is_world_regdom(last_request->alpha2)) {
 		REG_DBG_PRINT("Ignoring regulatory request %s "
-			      "since the driver requires its own regulaotry "
+			      "since the driver requires its own regulatory "
 			      "domain to be set first",
 			      reg_initiator_name(initiator));
 		return true;
@@ -1790,12 +1789,33 @@ static void restore_regulatory_settings(bool reset_user)
 	char alpha2[2];
 	char world_alpha2[2];
 	struct reg_beacon *reg_beacon, *btmp;
+	struct regulatory_request *reg_request, *tmp;
+	LIST_HEAD(tmp_reg_req_list);
 
 	mutex_lock(&cfg80211_mutex);
 	mutex_lock(&reg_mutex);
 
 	reset_regdomains(true);
 	restore_alpha2(alpha2, reset_user);
+
+	/*
+	 * If there's any pending requests we simply
+	 * stash them to a temporary pending queue and
+	 * add then after we've restored regulatory
+	 * settings.
+	 */
+	spin_lock(&reg_requests_lock);
+	if (!list_empty(&reg_requests_list)) {
+		list_for_each_entry_safe(reg_request, tmp,
+					 &reg_requests_list, list) {
+			if (reg_request->initiator !=
+			    NL80211_REGDOM_SET_BY_USER)
+				continue;
+			list_del(&reg_request->list);
+			list_add_tail(&reg_request->list, &tmp_reg_req_list);
+		}
+	}
+	spin_unlock(&reg_requests_lock);
 
 	/* Clear beacon hints */
 	spin_lock_bh(&reg_pending_beacons_lock);
@@ -1833,8 +1853,31 @@ static void restore_regulatory_settings(bool reset_user)
 	 */
 	if (is_an_alpha2(alpha2))
 		regulatory_hint_user(user_alpha2);
-}
 
+	if (list_empty(&tmp_reg_req_list))
+		return;
+
+	mutex_lock(&cfg80211_mutex);
+	mutex_lock(&reg_mutex);
+
+	spin_lock(&reg_requests_lock);
+	list_for_each_entry_safe(reg_request, tmp, &tmp_reg_req_list, list) {
+		REG_DBG_PRINT("Adding request for country %c%c back "
+			      "into the queue\n",
+			      reg_request->alpha2[0],
+			      reg_request->alpha2[1]);
+		list_del(&reg_request->list);
+		list_add_tail(&reg_request->list, &reg_requests_list);
+	}
+	spin_unlock(&reg_requests_lock);
+
+	mutex_unlock(&reg_mutex);
+	mutex_unlock(&cfg80211_mutex);
+
+	REG_DBG_PRINT("Kicking the queue\n");
+
+	schedule_work(&reg_work);
+}
 
 void regulatory_hint_disconnect(void)
 {
